@@ -1,18 +1,49 @@
 #include "IntervalTree.h"
 #include <vector>
 #include <cassert>
-#include <unordered_set>
-#include <unordered_map>
 #include <Rcpp.h>
 
 #include <iostream>
 
+#if __cplusplus > 199711L
+#include <memory>
+#include <unordered_set>
+#include <unordered_map>
+#define SeqHashMap std::unordered_map
+#define SeqHashSet std::unordered_set
+#define SeqPointer std::shared_ptr
+#define HAVE_C11 1
+#else
+
+#ifdef __APPLE__
+#include <memory>
+#include <unordered_set>
+#include <unordered_map>
+#define SeqHashMap std::unordered_map
+#define SeqHashSet std::unordered_set
+#define SeqPointer std::shared_ptr
+#else
+#include <tr1/memory>
+#include <tr1/unordered_set>
+#include <tr1/unordered_map>
+#define SeqHashMap std::tr1::unordered_map
+#define SeqHashSet std::tr1::unordered_set
+#define SeqPointer std::tr1::shared_ptr
+#endif
+#endif
+
 typedef TInterval<int32_t> GenomicInterval;
-typedef std::unordered_map<int32_t, std::vector<GenomicInterval> > GenomicIntervalMap;
+typedef SeqHashMap<int32_t, std::vector<GenomicInterval> > GenomicIntervalMap;
 typedef TIntervalTree<int32_t> GenomicIntervalTree;
-typedef std::unordered_map<int32_t, GenomicIntervalTree> GenomicIntervalTreeMap;
+typedef SeqHashMap<int32_t, GenomicIntervalTree> GenomicIntervalTreeMap;
 typedef std::vector<GenomicInterval> GenomicIntervalVector;
 
+//' Construct the interval tree
+//' @param c Vector of chromosomes (as integers)
+//' @param s Vector of start positions
+//' @param e Vector of end positions
+//' @param tree GenomicIntervalTreeMap to fill (see https://github.com/walaj/SeqLib)
+//' @noRd
 void make_tree(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s, const Rcpp::IntegerVector& e, GenomicIntervalTreeMap& tree) {
 
   GenomicIntervalMap map;
@@ -32,11 +63,11 @@ void make_tree(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s, const
 }
 
 // convert chr string (c) to chr numeric (o) in order they come, with mapping (map)
-void chr_map(const Rcpp::IntegerVector& c, std::vector<int32_t> *o, std::unordered_map<int32_t, std::string>& map) {
+void chr_map(const Rcpp::IntegerVector& c, std::vector<int32_t> *o, SeqHashMap<int32_t, std::string>& map) {
 
   int chr_iter = -1; // always should find the first one so iterate up to 0;
   int j = 0;
-  std::unordered_set<std::string> tmp_store;
+  SeqHashSet<std::string> tmp_store;
   for (j = 0; j < c.size(); ++j) {
     if (tmp_store.find(std::to_string(c(j))) == tmp_store.end())
       map[++chr_iter] = std::to_string(c(j));
@@ -44,6 +75,11 @@ void chr_map(const Rcpp::IntegerVector& c, std::vector<int32_t> *o, std::unorder
   }
 }
 
+//' Perform the overlaps using an interval tree
+//' @param df1 query data.table / data.frame with fields: seqnames, start, end
+//' @param df2 subject data.table / data.frame with fields: seqnames, start, end
+//' @return data.frame with ranges (seqnames, start, end) and query.id and subject.id
+//' @noRd
 // [[Rcpp::export]]
 Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2)
 {
@@ -54,7 +90,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   const Rcpp::IntegerVector e1 = df1["end"];
   const Rcpp::IntegerVector e2 = df2["end"];
 
-  std::unordered_map<int32_t, std::string> c1_map, c2_map;
+  SeqHashMap<int32_t, std::string> c1_map, c2_map;
   std::vector<int32_t> co, so, eo, query_id, subject_id;
 
   // loop through and make the intervals for each chromosome
