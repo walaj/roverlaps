@@ -62,19 +62,6 @@ void make_tree(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s, const
   }
 }
 
-// convert chr string (c) to chr numeric (o) in order they come, with mapping (map)
-void chr_map(const Rcpp::IntegerVector& c, std::vector<int32_t> *o, SeqHashMap<int32_t, std::string>& map) {
-
-  int chr_iter = -1; // always should find the first one so iterate up to 0;
-  int j = 0;
-  SeqHashSet<std::string> tmp_store;
-  for (j = 0; j < c.size(); ++j) {
-    if (tmp_store.find(std::to_string(c(j))) == tmp_store.end())
-      map[++chr_iter] = std::to_string(c(j));
-    o->at(j) = chr_iter;
-  }
-}
-
 //' Perform the overlaps using an interval tree
 //' @param df1 query data.table / data.frame with fields: seqnames, start, end
 //' @param df2 subject data.table / data.frame with fields: seqnames, start, end
