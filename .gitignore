@@ -5,3 +5,6 @@
 _build*
 .Rproj.user
 *.Rproj
+*.o
+*.so
+roverlaps
