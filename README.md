@@ -24,10 +24,11 @@ Range overlaps between different sets of genomic intervals
 	     and provides flexibility for users to choose only what they need,
 	     thereby improving memory performance.
 
+### NOTE
 Note that the prefered input for the fastest performance is:
 * Input is ``data.table`` (``GRanges`` will get converted)
 * Seqnames are factors or numeric, not characters
-* Input must be sorted (``setnames(dt, seqnames, start)``). An error is thrown if not.
+* Input must be sorted (``data.table::setkey(dt, seqnames, start)``). An error is thrown if not.
 
 Examples
 --------
