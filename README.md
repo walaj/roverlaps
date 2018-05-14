@@ -59,6 +59,18 @@ Will give the following output:
 4:        X     4   4        2          4
 ```
 
+Performance
+-----------
+
+Test of range overlap of 5 million vs 50 million records, repeated 10 times. Each 
+overlap produces 24,999,997 overlaps.
+
+Comparison is between ``roverlaps`` and ``gUtils::gr.findoverlaps`` which
+is based on ``GenomicRanges::findOverlaps``.
+
+<img src="https://github.com/walaj/roverlaps/blob/master/memgraph.both.png"
+width=600/>
+
 Attributions
 ------------
 
