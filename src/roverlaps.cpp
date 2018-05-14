@@ -4,7 +4,6 @@
 #include <cassert>
 #include <Rcpp.h>
 
-#include <unistd.h>
 #include <iostream>
 
 #define rassert(b, msg)                        \
@@ -266,11 +265,11 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
       if (verbose)
         std::cerr << "roverlaps.cpp: done with c++ call" << std::endl;
 
+      delete tree2;
+
       if (index_only)
         return Rcpp::DataFrame::create(Rcpp::Named("query.id")=query_id,
                                        Rcpp::Named("subject.id")=subject_id);
-
-      usleep(8000000);
 
       return Rcpp::DataFrame::create(Rcpp::Named("seqnames")=co,
                                      Rcpp::Named("start")=so,
