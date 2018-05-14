@@ -3,7 +3,7 @@
 #' Description of your package
 #'
 #' @docType package
-#' @author you <youremail>
+#' @author Jeremiah Wala <jwala@broadinstitute.org>
 #' @import Rcpp
 #' @importFrom Rcpp evalCpp
 #' @useDynLib roverlaps
@@ -35,8 +35,8 @@ cpp_gr2dt = function(x)
         }
 
         was.gr = TRUE
-        f = c('seqnames', 'start', 'end', 'strand', 'width')
-        f2 = c('as.character(seqnames', 'c(start', 'c(end', 'as.character(strand', 'as.numeric(width')
+        f = c('seqnames', 'start', 'end', 'strand') #, 'width')
+        f2 = c('as.character(seqnames', 'c(start', 'c(end', 'as.character(strand') #, 'as.numeric(width')
         cmd = paste(cmd, paste(f, '=', f2, '(x))', sep = '', collapse = ','), sep = '')
         value.f = names(values(x))
       } else {
@@ -44,7 +44,7 @@ cpp_gr2dt = function(x)
         value.f = names(x)
       }
 
-    if (length(value.f)>0)
+    if (FALSE && length(value.f)>0)
       {
         if (was.gr){
           cmd = paste(cmd, ',', sep = '')
@@ -86,11 +86,16 @@ cpp_gr2dt = function(x)
 #'
 #' @param o1 Query ranges
 #' @param o2 Subject ranges
-#' @param robust Perform extra checks (\code{is.unsorted}). \code{[TRUE]}
+#' @param cores Maximum number of cores (processes in 1M chunks) [1]
+#' @param verbose Increase the output to stderr
+#' @param index_only Return only the indicies (query.id and subject.id)
 #' @importFrom data.table data.table as.data.table
 #' @return data.table ('seqnames', 'start', 'end', 'strand', 'query.id', 'subject.id') of overlaps
 #' @export
-roverlaps <- function(o1, o2, robust=TRUE) {
+roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
+
+  if (verbose)
+    print("roverlaps.R: checking input")
 
   if (inherits(o1, "GRanges"))
     o1 <- cpp_gr2dt(o1)
@@ -101,6 +106,18 @@ roverlaps <- function(o1, o2, robust=TRUE) {
     stop("required input is a data.table (preferred) or GRanges")
   if (!inherits(o2,"data.table"))
     stop("required input is a data.table (preferred) or GRanges")
+
+  # need full bounds (for now)
+  if (!"end" %in% colnames(o1))
+    o1$end = o1$start
+  if (!"end" %in% colnames(o2))
+    o2$end = o2$start
+
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
+
+  if (verbose)
+    print("roverlaps.R: factorizing")
 
   # convert char to factor for Rcpp
   charswitch = FALSE;
@@ -113,40 +130,36 @@ roverlaps <- function(o1, o2, robust=TRUE) {
     charswitch = TRUE
   }
 
-  ## check sorted
-  if (robust) {
-    if (any(o1[, is.unsorted(start), by="seqnames"]$V1))
-      stop("o1 is not sorted by position")
-    #if (o1[, is.unsorted(as.character(seqnames))])
-    #  stop("o1 is not sorted by seqnames")
-
-    if (any(o2[, is.unsorted(start), by="seqnames"]$V1))
-      stop("o2 is not sorted by position")
-    #if (o2[, is.unsorted(as.character(seqnames))])
-    #  stop("o2 is not sorted by seqnames")
-
-    if (any(o1[, end < start]))
-      stop("o1 has end < start intervals")
-    if (any(o2[, end < start]))
-      stop("o1 has end < start intervals")
-  }
-
   ## enforce that seqnames work between the two
   # (should be factor at this point, per above)
   new_levels <- union(levels(o1$seqnames),levels(o2$seqnames))
-  if (robust) {
-    o1$seqnames <- factor(o1$seqnames, levels=new_levels)
-    o2$seqnames <- factor(o2$seqnames, levels=new_levels)
+  if (!identical(levels(o1$seqnames), levels(o2$seqnames)) ||
+      class(o1$seqnames) != "factor" || class(o2$seqnames) != "factor") {
+    if (verbose)
+      print("roverlaps.R: setting new factor levels")
+    o1[, seqnames := factor(seqnames, levels=new_levels)]
+    o2[, seqnames := factor(seqnames, levels=new_levels)]
   }
 
   if (!identical(levels(o1$seqnames), levels(o2$seqnames)))
     stop("requires that o1 and o2 have same factor levels in same order. Or that o1 and o2 have same characters")
 
+  if (verbose)
+    print("roverlaps.R: calling cpp")
+
   ## do the actual overlaps
-  o <- data.table::as.data.table(cppoverlaps(o1, o2))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
+  o <- as.data.table(cppoverlaps(o1, o2, cores, verbose, index_only))
+
+  if (index_only)
+    return (o)
+
+  ## sort it
+  setkey(o, seqnames, start, end)
 
   ## convert back from int to factor
-  o$seqnames = factor(levels(o1$seqnames)[o$seqnames], levels=levels(o1$seqnames))
+  o[,seqnames := factor(levels(o1$seqnames)[seqnames], levels=levels(o1$seqnames))]
 
   return(o)
 }

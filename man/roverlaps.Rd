@@ -10,7 +10,7 @@
 \usage{
 cpp_gr2dt(x)
 
-roverlaps(o1, o2, robust = TRUE)
+roverlaps(o1, o2, robust = TRUE, cores = 2)
 }
 \arguments{
 \item{x}{\code{GRanges} to convert}
@@ -20,6 +20,8 @@ roverlaps(o1, o2, robust = TRUE)
 \item{o2}{Subject ranges}
 
 \item{robust}{Perform extra checks (\code{is.unsorted}). \code{[TRUE]}}
+
+\item{cores}{Maximum number of cores (processes in 1M chunks)}
 }
 \value{
 data.table of GRanges columns ('seqnames', 'start', 'end', 'strand', 'width') and metadata columns

@@ -1,9 +1,16 @@
 context("test-roverlaps.R")
-
+library(data.table)
 test_that("unit test 1", {
-  d1 <- data.table(seqnames=c(1, "X"), start=c(1,10), end=c(10,20))
-  d2 <- data.table(seqnames=c("Y",1), start=c(10,5), end=c(20,9))
-  o <- roverlaps(d1, d2)
+  k=1e6
+  verbose=TRUE
+  cores=1
+  index_only=FALSE
+  o1 <- data.table(seqnames=factor(rep(c(1, "X"), each=k)), start=seq(k*2), end=seq(k*2)+2)
+  k=1e6
+  o2 <- data.table(seqnames=factor(rep(c(1, "X"), each=k)), start=seq(k*2), end=seq(k*2)+2)
+  system.time(o <- roverlaps(o1, o2, robust=robust, cores=cores, verbose=verbose, index_only=index_only))
+  system.time(o <- gr.findoverlaps(o1, o2, verbose=TRUE, max.chunk=1e16))
+  rm(d2)
   expect_equal(as.character(o$seqnames), as.character("1"))
   expect_equal(nrow(o), 1)
   expect_equal(o$start, 5)

@@ -12,9 +12,12 @@ NULL
 #' Perform the overlaps using an interval tree
 #' @param df1 query data.table / data.frame with fields: seqnames, start, end
 #' @param df2 subject data.table / data.frame with fields: seqnames, start, end
+#' @param cores Max number of cores to use (process in 1,000,000 unit chunks)
+#' @param verbose Print more
+#' @param index_only Only return the index values (saves memory)
 #' @return data.frame with ranges (seqnames, start, end) and query.id and subject.id
 #' @noRd
-cppoverlaps <- function(df1, df2) {
-    .Call('_roverlaps_cppoverlaps', PACKAGE = 'roverlaps', df1, df2)
+cppoverlaps <- function(df1, df2, cores, verbose, index_only) {
+    .Call('_roverlaps_cppoverlaps', PACKAGE = 'roverlaps', df1, df2, cores, verbose, index_only)
 }
 

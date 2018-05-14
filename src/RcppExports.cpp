@@ -6,20 +6,23 @@
 using namespace Rcpp;
 
 // cppoverlaps
-Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2);
-RcppExport SEXP _roverlaps_cppoverlaps(SEXP df1SEXP, SEXP df2SEXP) {
+Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2, int cores, bool verbose, bool index_only);
+RcppExport SEXP _roverlaps_cppoverlaps(SEXP df1SEXP, SEXP df2SEXP, SEXP coresSEXP, SEXP verboseSEXP, SEXP index_onlySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type df1(df1SEXP);
     Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type df2(df2SEXP);
-    rcpp_result_gen = Rcpp::wrap(cppoverlaps(df1, df2));
+    Rcpp::traits::input_parameter< int >::type cores(coresSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< bool >::type index_only(index_onlySEXP);
+    rcpp_result_gen = Rcpp::wrap(cppoverlaps(df1, df2, cores, verbose, index_only));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_roverlaps_cppoverlaps", (DL_FUNC) &_roverlaps_cppoverlaps, 2},
+    {"_roverlaps_cppoverlaps", (DL_FUNC) &_roverlaps_cppoverlaps, 5},
     {NULL, NULL, 0}
 };
 
