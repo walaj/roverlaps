@@ -127,27 +127,28 @@ void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
   int32_t curr_chr = 0;
   for (size_t i = 0; i < c.size(); ++i) {
     rassert(e[i] >= s[i], "end < start");
-    if (chr_table.find(c[i]) == chr_table.end() || (i+1 == c.size())) { // not found or last one
+    if (chr_table.find(c[i]) == chr_table.end()) { // switch chr, so check the previous chr one
       chr_table.insert(c[i]);
-      rassert(std::is_sorted(s.begin() + sort_start, s.begin() + i + 1), "start pos not sorted");
+      rassert(std::is_sorted(s.begin() + sort_start, s.begin() + i), "start pos not sorted");
       sort_start = i;
       curr_chr = c[i];
     } else {
       rassert(curr_chr == c[i], "seqnames not sorted"); // assure we are still on same chr
     }
   }
+  // check the last chromsome
+  rassert(std::is_sorted(s.begin() + sort_start, s.end()), "start pos not sorted");
 }
 
 //' Perform the overlaps using an interval tree
 //' @param df1 query data.table / data.frame with fields: seqnames, start, end
 //' @param df2 subject data.table / data.frame with fields: seqnames, start, end
-//' @param cores Max number of cores to use (process in 1,000,000 unit chunks)
 //' @param verbose Print more
 //' @param index_only Only return the index values (saves memory)
 //' @return data.frame with ranges (seqnames, start, end) and query.id and subject.id
 //' @noRd
 // [[Rcpp::export]]
-Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2, int cores, bool verbose, bool index_only)
+Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2, bool verbose, bool index_only)
 {
   if (verbose)
     Rprintf("start roverlaps.cpp");

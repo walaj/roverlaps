@@ -146,16 +146,17 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
   ## enforce that seqnames work between the two
   # (should be factor at this point, per above)
   new_levels <- union(levels(o1$seqnames),levels(o2$seqnames))
-  if (!identical(levels(o1$seqnames), levels(o2$seqnames)) ||
-      class(o1$seqnames) != "factor" || class(o2$seqnames) != "factor") {
+  needs_fix = !identical(levels(o1$seqnames), levels(o2$seqnames)) ||
+    class(o1$seqnames) != "factor" || class(o2$seqnames) != "factor"
+
+  if (needs_fix && !index_only) { ## if index only, don't need to reset factors
     if (verbose)
       print("roverlaps.R: setting new factor levels")
     o1[, seqnames := factor(seqnames, levels=new_levels)]
     o2[, seqnames := factor(seqnames, levels=new_levels)]
+    if (!identical(levels(o1$seqnames), levels(o2$seqnames)))
+      stop("requires that o1 and o2 have same factor levels in same order. Or that o1 and o2 have same characters")
   }
-
-  if (!identical(levels(o1$seqnames), levels(o2$seqnames)))
-    stop("requires that o1 and o2 have same factor levels in same order. Or that o1 and o2 have same characters")
 
   if (verbose)
     print("roverlaps.R: calling cpp")

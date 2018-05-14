@@ -1,6 +1,6 @@
 Package: roverlaps
 Type: Package
-Title: Fast, memory-efficient genomic range overlaps
+Title: Fast, Memory-Efficient Genomic Range Overlaps
 Version: 0.1.0
 Author: Jeremiah Wala
 Date: 2018-05-13
