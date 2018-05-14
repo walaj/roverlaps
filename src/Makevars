@@ -1,2 +1,2 @@
-PKG_CPPFLAGS = -pthread
+PKG_CPPFLAGS = -pthread -std=c++11
 PKG_LIBS = -pthread
