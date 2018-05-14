@@ -13,6 +13,8 @@ Description: Range overlaps between different sets of genomic intervals
 	     and provides flexibility for users to choose only what they need,
 	     thereby improving memory performance.
 License: MIT + file LICENSE
+SystemRequirements: A C++11 compiler. Version 4.6.* of g++ (as currently in
+    Rtools) is insufficient; versions 4.8.*, 4.9.* or later will be fine.
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1

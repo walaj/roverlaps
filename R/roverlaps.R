@@ -164,7 +164,7 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
   ## do the actual overlaps
   stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
   stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
-  o <- as.data.table(cppoverlaps(o1, o2, cores, verbose, index_only))
+  o <- as.data.table(cppoverlaps(o1, o2, verbose, index_only))
 
   if (index_only)
     return (o)
