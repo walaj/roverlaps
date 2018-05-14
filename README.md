@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/walaj/bxtools.svg?branch=master)](https://travis-ci.org/walaj/bxtools)
+[![Build Status](https://travis-ci.org/walaj/roverlaps.svg?branch=master)](https://travis-ci.org/walaj/roverlaps)
 
 ## *rovertools* - Fast and memory efficient genomic range overlaps in R
 
