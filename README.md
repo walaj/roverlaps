@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/walaj/roverlaps.svg?branch=master)](https://travis-ci.org/walaj/roverlaps)
+[![codecov.io](https://img.shields.io/codecov/c/github/walaj/roverlaps.svg)](https://codecov.io/github/walaj/roverlaps?branch=master)
 
 ## *roverlaps* - Fast and memory efficient genomic range overlaps in R
 

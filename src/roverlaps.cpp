@@ -6,6 +6,10 @@
 if (b == 0)                                   \
   throw std::runtime_error(msg);
 
+#define rverb(msg,...)                                         \
+  if (verbose)                                                 \
+    Rprintf(msg,__VA_ARGS__);
+
 #if __cplusplus > 199711L
 #include <memory>
 #include <unordered_set>
@@ -41,9 +45,6 @@ typedef std::vector<GenomicInterval> GenomicIntervalVector;
 
 // shared memory items across threads
 GenomicIntervalTreeMap * tree2;
-const Rcpp::IntegerVector *cloop;
-const Rcpp::IntegerVector *sloop;
-const Rcpp::IntegerVector *eloop;
 
 //' Construct the interval tree
 //' @param c Vector of chromosomes (as integers)
@@ -174,7 +175,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   tree2 = new GenomicIntervalTreeMap();
 
   if (verbose)
-    Rprintf("roverlaps: Making interval tree for %d interval\n",(c2.size() > c1.size() ? c1.size() : c2.size()));
+    Rprintf("roverlaps: Making interval tree for %d interval\n",c2.size() > c1.size() ? c1.size() : c2.size());
 
   // decide which is bigger, it gets looped. Smaller gets tree'ed
   // this is much faster and uses less memory
@@ -182,13 +183,13 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   if (c2.size() > c1.size()) { // c1 should be tree
     make_tree(c1, s1, e1, tree2);
     if (verbose)
-      Rprintf("robust: looping %d interval\n", cloop->size());
+      Rprintf("robust: looping %d interval\n", c2.size());
     for (int i = 0; i < c2.size(); ++i)
       find_overlaps(tree2,c2.at(i),s2.at(i),e2.at(i),i,&subject_id, &query_id,&co, &so, &eo,index_only);
   } else {
     make_tree(c2, s2, e2, tree2);
     if (verbose)
-      Rprintf("robust: looping %d interval\n", cloop->size());
+      Rprintf("robust: looping %d interval\n", c1.size());
     for (int i = 0; i < c1.size(); ++i)
       find_overlaps(tree2,c1.at(i),s1.at(i),e1.at(i),i,&query_id, &subject_id,&co, &so, &eo,index_only);
   }
