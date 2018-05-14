@@ -43,6 +43,12 @@ test_that("verbose", { ## make sure it doesn't crash
   roverlaps(o1, o2, verbose=TRUE)
 })
 
+test_that("index_only", { ## make sure it doesn't crash
+  o1 <- data.table(seqnames=factor(c(1,1)), start=c(1,1), end=c(2,2))
+  o2 <- data.table(seqnames=factor(c(1,2)), start=c(1,1), end=c(2,3))
+  o <- roverlaps(o1, o2, index_only=TRUE)
+})
+
 # test_that("test massive input", {
 #   k=1e7
 #   o1 <- data.table(seqnames=factor(rep(1,k)), start=1, end=2)

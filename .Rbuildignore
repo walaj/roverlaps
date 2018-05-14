@@ -5,3 +5,5 @@ test_run.R
 .travis.yml
 .codecov.yml
 .git*
+roverlaps.pdf
+.DS_Store

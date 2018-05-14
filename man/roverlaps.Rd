@@ -3,18 +3,13 @@
 \docType{package}
 \name{roverlaps}
 \alias{roverlaps}
-\alias{cpp_gr2dt}
 \alias{roverlaps-package}
 \alias{roverlaps}
-\title{Converts \code{GRanges} to \code{data.table}}
+\title{roverlaps}
 \usage{
-cpp_gr2dt(x)
-
 roverlaps(o1, o2, cores = 1, verbose = FALSE, index_only = FALSE)
 }
 \arguments{
-\item{x}{\code{GRanges} to convert}
-
 \item{o1}{Query ranges}
 
 \item{o2}{Subject ranges}
@@ -26,20 +21,12 @@ roverlaps(o1, o2, cores = 1, verbose = FALSE, index_only = FALSE)
 \item{index_only}{Return only the indicies (query.id and subject.id)}
 }
 \value{
-data.table of GRanges columns ('seqnames', 'start', 'end', 'strand', 'width') and metadata columns
-
 data.table ('seqnames', 'start', 'end', 'strand', 'query.id', 'subject.id') of overlaps
 }
 \description{
-Converts \code{GRanges} to \code{data.table}
-and a field grl.iix which saves the (local) index that that gr was in its corresponding grl item
-
-
-}
-\details{
-roverlaps
-
 Description of your package
+
+
 }
 \author{
 Jeremiah Wala <jwala@broadinstitute.org>

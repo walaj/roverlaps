@@ -3,7 +3,8 @@
 
 ## *roverlaps* - Fast and memory efficient genomic range overlaps in R
 
-**License:** [MIT][license]
+**License:** MIT
+**Copyright:** 2018 Jeremiah Wala
 
   * [Installation](#installation)
   * [Description](#description)
@@ -82,7 +83,6 @@ This project is developed and maintained by Jeremiah Wala (jwala@broadinstitute.
 
 Thanks to Erik Garrison for the excellent [interval tree][tree] implementation.
 
-[license]: https://github.com/walaj/roverlaps/blob/master/LICENSE
 [gUtils]: https://github.com/mskilab/gUtils
 [tree]: https://github.com/ekg/intervaltree
 

@@ -24,6 +24,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", ":="))
 #' @importFrom data.table data.table as.data.table
 #' @importFrom methods is
 #' @return data.table of GRanges columns ('seqnames', 'start', 'end', 'strand', 'width') and metadata columns
+#' @noRd
 cpp_gr2dt = function(x)
   {
     ## new approach just directly instantiating data table
