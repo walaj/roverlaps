@@ -1,5 +1,6 @@
 context("test-roverlaps.R")
 library(data.table)
+
 test_that("unit test 1", {
   k=1e1
   verbose=FALSE
@@ -24,3 +25,10 @@ test_that("check sort fail", {
   o2 <- data.table(seqnames=factor(c(2,2)), start=c(2,1), end=c(3,2))
   expect_error(roverlaps(o1, o2, verbose=TRUE))
 })
+
+# test_that("test massive input", {
+#   k=1e7
+#   o1 <- data.table(seqnames=factor(rep(1,k)), start=1, end=2)
+#   o2 <- data.table(seqnames=factor(2), start=1,end=3)
+#   o <- roverlaps(o1,o2,verbose=TRUE,cores=4)
+# })

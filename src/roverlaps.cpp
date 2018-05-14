@@ -1,16 +1,10 @@
 #include "IntervalTree.h"
-#include "pthread-lite.h"
 #include <vector>
-#include <cassert>
 #include <Rcpp.h>
 
-#include <iostream>
-
-#define rassert(b, msg)                        \
-if (b == 0)                                         \
-{                                                   \
-  throw std::runtime_error(msg);                \
-}
+#define rassert(b, msg)                       \
+if (b == 0)                                   \
+  throw std::runtime_error(msg);
 
 #if __cplusplus > 199711L
 #include <memory>
@@ -50,76 +44,6 @@ GenomicIntervalTreeMap * tree2;
 const Rcpp::IntegerVector *cloop;
 const Rcpp::IntegerVector *sloop;
 const Rcpp::IntegerVector *eloop;
-bool global_verbose;
-bool global_index_only;
-
-// forward declare
-bool find_overlaps(const GenomicIntervalTreeMap* tree, int32_t c, int32_t s, int32_t e,
-                   size_t index,
-                   std::vector<int32_t>* query, std::vector<int32_t>* subject,
-                   std::vector<int32_t>* chr, std::vector<int32_t>* start,
-                   std::vector<int32_t>* end);
-
-/** Define a thread-item class to hold data, etc private
- * to each thread. For instance, this can store output from a thread that
- * can be dumped to a file after all processing is done. This is useful
- * because writing to a file in a multi-threaded program requires a mutex lock,
- * thus halting work on other threads. Alternatively useful for holding a pointer
- * for random access to a file, so multiple threads can randomly access the same file
- */
-struct OverlapThreadItem {
-
-  OverlapThreadItem(size_t i) : id(i) {}
-
-  size_t id; // id to identify thread
-
-  // include any number of thread-specific data below
-  std::vector<int32_t> co, so, eo, query_id, subject_id;
-
-  size_t NumHits() const {
-    return co.size();
-  }
-};
-
-/** Define a work-item class to hold data for specific task
- * (e.g. some operation on a set of sequences stored in char array)
- */
-class OverlapWorkItem {
-
-public:
-  OverlapWorkItem(int start, int end) : m_start(start), m_end(end) {}
-
-  // define the actual work to be done
-  bool runOverlap(OverlapThreadItem* thread_data) {
-
-    // loop through the query and overlap with subject
-    for (size_t i = m_start; i < m_end; ++i) {
-      find_overlaps(tree2, cloop->at(i),
-                    sloop->at(i),
-                    eloop->at(i),
-                    i,
-                    &thread_data->query_id, &thread_data->subject_id,
-                    &thread_data->co, &thread_data->so, &thread_data->eo);
-    }
-
-    if (global_verbose)
-      Rprintf("finished overlaps for intervals (%d,$d)\n",m_start,m_end);
-
-    return true;
-  }
-
-  // always include a run function that takes only
-  // a thread-item and returns bool
-  bool run(OverlapThreadItem* thread_data) {
-    // do the actual work
-    return runOverlap(thread_data);
-  }
-
-private:
-
-  // some chunk of data to be processed as one unit on one thread
-  int m_start, m_end;
-};
 
 //' Construct the interval tree
 //' @param c Vector of chromosomes (as integers)
@@ -130,10 +54,8 @@ private:
 void make_tree(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s, const Rcpp::IntegerVector& e, GenomicIntervalTreeMap* tree) {
 
   GenomicIntervalMap map;
-  for (size_t i = 0; i < c.size(); ++i) {
-    //assert(i == 0 || (c.at(i-1) <= c.at(i)) || (s(i-1) < s(i))); //assure sorted
+  for (size_t i = 0; i < c.size(); ++i)
     map[c.at(i)].push_back(GenomicInterval(s(i), e(i), i));
-  }
 
   // for each chr, make the tree from the intervals
   for (GenomicIntervalMap::iterator it = map.begin(); it != map.end(); ++it) {
@@ -145,11 +67,23 @@ void make_tree(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s, const
   }
 }
 
+//' Calculate if a range overlaps against an interval tree
+//' @param tree Interval tree (map) to query against
+//' @param c Query chromosome
+//' @param s Query start
+//' @param e Query end
+//' @param index Position of the query range in the query set
+//' @param query Will store the index of the query range
+//' @param subject Will store the index of the subject range
+//' @param chr Will store the chromosome of the output overlap range
+//' @param start Will store the start of the output overlap range
+//' @param end Will store the end of the output overlap range
+//' @noRd
 bool find_overlaps(const GenomicIntervalTreeMap* tree, int32_t c, int32_t s, int32_t e,
-                  size_t index,
-                  std::vector<int32_t>* query, std::vector<int32_t>* subject,
-                  std::vector<int32_t>* chr, std::vector<int32_t>* start,
-                  std::vector<int32_t>* end) {
+                   size_t index,
+                   std::vector<int32_t>* query, std::vector<int32_t>* subject,
+                   std::vector<int32_t>* chr, std::vector<int32_t>* start,
+                   std::vector<int32_t>* end, bool index_only) {
 
   // which chr (if any) are common between query and subject
   GenomicIntervalTreeMap::const_iterator ff = tree->find(c);
@@ -167,7 +101,7 @@ bool find_overlaps(const GenomicIntervalTreeMap* tree, int32_t c, int32_t s, int
   for (GenomicIntervalVector::const_iterator j = giv.begin(); j != giv.end(); ++j) {
     query->push_back(index + 1); // R is 1 indexed
     subject->push_back(j->value + 1);
-    if (!global_index_only) {
+    if (!index_only) {
       chr->push_back(c);
       start->push_back(std::max(static_cast<int32_t>(j->start), static_cast<int32_t>(s)));
       end->push_back(std::min(static_cast<int32_t>(j->stop), static_cast<int32_t>(e)));
@@ -176,6 +110,16 @@ bool find_overlaps(const GenomicIntervalTreeMap* tree, int32_t c, int32_t s, int
   return true;
 }
 
+//' Check if a set of ranges is sorted
+//'
+//' Will throw and error if seqnames are not relatively sorted (but does not check
+//' if absolutely sorted relative to ordering e.g. alphanumeric)
+//' or will throw error if start position not sorted or will throw error if
+//' range has negative (end < start) width.
+//' @param c Seqnames
+//' @param s start positions
+//' @param e end positions
+//' @noRd
 void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
                 const Rcpp::IntegerVector& e) {
   SeqHashSet<int32_t> chr_table;
@@ -208,8 +152,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   if (verbose)
     Rprintf("start roverlaps.cpp");
 
-  global_verbose = verbose;
-  global_index_only = index_only;
+  // define input structures
   const Rcpp::IntegerVector c1 = df1["seqnames"];
   const Rcpp::IntegerVector c2 = df2["seqnames"];
   const Rcpp::IntegerVector s1 = df1["start"];
@@ -217,141 +160,50 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   const Rcpp::IntegerVector e1 = df1["end"];
   const Rcpp::IntegerVector e2 = df2["end"];
 
+  // define output structures
+  std::vector<int32_t> co, so, eo, query_id, subject_id;
+
   // check sorted
   if (verbose)
     Rprintf("roverlaps.cpp: checking sorting of input");
-
   check_sort(c1, s1, e1);
   check_sort(c2, s2, e2);
 
   // loop through and make the intervals for each chromosome
   tree2 = new GenomicIntervalTreeMap();
 
-  // decide which is bigger, it gets looped. Smaller gets tree'ed
-  // this is much faster and uses less memory
-  // default is that 2 is the tree
-  cloop = &c1;
-  sloop = &s1;
-  eloop = &e1;
-
   if (verbose)
     Rprintf("roverlaps: Making interval tree for %d interval\n",(c2.size() > c1.size() ? c1.size() : c2.size()));
 
+  // decide which is bigger, it gets looped. Smaller gets tree'ed
+  // this is much faster and uses less memory
+  // default is that 2 is the tree
   if (c2.size() > c1.size()) { // c1 should be tree
     make_tree(c1, s1, e1, tree2);
-    cloop = &c2;
-    sloop = &s2;
-    eloop = &e2;
-  } else {
-    make_tree(c2, s2, e2, tree2);
-  }
-
-  if (cores==1) {
-    std::vector<int32_t> co, so, eo, query_id, subject_id;
     if (verbose)
       Rprintf("robust: looping %d interval\n", cloop->size());
-
-    for (int i = 0; i < cloop->size(); ++i)
-      find_overlaps(tree2, cloop->at(i),
-                    sloop->at(i),
-                    eloop->at(i),
-                    i,
-                    &query_id, &subject_id,
-                    &co, &so, &eo);
-      if (c2.size() > c1.size()) // c1 should be tree
-        std::swap(query_id, subject_id);
-      if (verbose)
-        Rprintf("roverlaps.cpp: done with c++ call");
-
-      delete tree2;
-
-      if (index_only)
-        return Rcpp::DataFrame::create(Rcpp::Named("query.id")=query_id,
-                                       Rcpp::Named("subject.id")=subject_id);
-
-      return Rcpp::DataFrame::create(Rcpp::Named("seqnames")=co,
-                                     Rcpp::Named("start")=so,
-                                     Rcpp::Named("end")=eo,
-                                     Rcpp::Named("query.id")=query_id,
-                                     Rcpp::Named("subject.id")=subject_id);
+    for (int i = 0; i < c2.size(); ++i)
+      find_overlaps(tree2,c2.at(i),s2.at(i),e2.at(i),i,&subject_id, &query_id,&co, &so, &eo,index_only);
+  } else {
+    make_tree(c2, s2, e2, tree2);
+    if (verbose)
+      Rprintf("robust: looping %d interval\n", cloop->size());
+    for (int i = 0; i < c1.size(); ++i)
+      find_overlaps(tree2,c1.at(i),s1.at(i),e1.at(i),i,&query_id, &subject_id,&co, &so, &eo,index_only);
   }
 
-  // create the work item queue and consumer threads
-  WorkQueue<OverlapWorkItem*>  queue; // queue of work items to be processed by threads
-  std::vector<ConsumerThread<OverlapWorkItem, OverlapThreadItem>* > threadqueue;
-
-
-  // add jobs to the thread
-  int interval = 1000000;
-  int end = -1;
-  while (end < static_cast<int>(cloop->size())) {
-    int start = end + 1;
-    end = std::min(start + interval, static_cast<int>(cloop->size()));
-
-    // add to the work queue
-    OverlapWorkItem * wu = new OverlapWorkItem(start, end);
-    queue.add(wu);
-  }
-
-  int num_cores = std::min(cores, (int)queue.size());
-
   if (verbose)
-    Rprintf("roverlaps: sending %d work units with up to 1M intervals each on %d threads\n", queue.size(), num_cores);
+    Rprintf("roverlaps.cpp: done with c++ call");
 
-  for (int i = 0; i < num_cores; ++i) {
-    OverlapThreadItem * tu  = new OverlapThreadItem(i);  // create the thread-specific data, must be on heap.
-    ConsumerThread<OverlapWorkItem, OverlapThreadItem>* threadr =        // establish new thread to draw from queue
-      new ConsumerThread<OverlapWorkItem, OverlapThreadItem>(queue, tu); // always takes WorkQueue and some thread item
+  delete tree2;
 
-    threadr->start();
-    threadqueue.push_back(threadr); // add thread to the threadqueue
-  }
-
-  // wait for the threads to finish
-  for (int i = 0; i < num_cores; ++i)
-    threadqueue[i]->join();
-
-  size_t num_hits = 0;
-  // get total num hits
-  for (int i = 0; i < threadqueue.size(); ++i)
-    num_hits += threadqueue[i]->GetThreadData()->NumHits();
-
-  // merge it out
-  if (verbose)
-    Rprintf("roverlaps: allocing output memory for %d intervals\n",num_hits);
-
-  std::vector<int32_t> co(num_hits);
-  std::vector<int32_t> so(num_hits);
-  std::vector<int32_t> eo(num_hits);
-  std::vector<int32_t> query_id(num_hits);
-  std::vector<int32_t> subject_id(num_hits);
-
-  if (verbose)
-    Rprintf("roverlaps: merging the output\n");
-
-  size_t k = 0;
-  for (int i = 0; i < threadqueue.size(); ++i) {
-    const OverlapThreadItem * td = threadqueue[i]->GetThreadData();
-    for (int j = 0; j < td->NumHits(); ++j) {
-      co[k] = td->co.at(j);
-      so[k] = td->so.at(j);
-      eo[k] = td->eo.at(j);
-      query_id[k] = td->query_id.at(j);
-      subject_id[k] = td->subject_id.at(j);
-      ++k;
-    }
-  }
-
-  if (c2.size() > c1.size()) // c1 should be tree
-    std::swap(query_id, subject_id);
-
-  if (verbose)
-    Rprintf("roverlaps.cpp: done with c++ call\n");
+  if (index_only)
+    return Rcpp::DataFrame::create(Rcpp::Named("query.id")=query_id,
+                                   Rcpp::Named("subject.id")=subject_id);
 
   return Rcpp::DataFrame::create(Rcpp::Named("seqnames")=co,
                                  Rcpp::Named("start")=so,
                                  Rcpp::Named("end")=eo,
                                  Rcpp::Named("query.id")=query_id,
                                  Rcpp::Named("subject.id")=subject_id);
-
 }

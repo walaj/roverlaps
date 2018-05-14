@@ -9,6 +9,32 @@
 #' @noRd
 NULL
 
+#' Calculate if a range overlaps against an interval tree
+#' @param tree Interval tree (map) to query against
+#' @param c Query chromosome
+#' @param s Query start
+#' @param e Query end
+#' @param index Position of the query range in the query set
+#' @param query Will store the index of the query range
+#' @param subject Will store the index of the subject range
+#' @param chr Will store the chromosome of the output overlap range
+#' @param start Will store the start of the output overlap range
+#' @param end Will store the end of the output overlap range
+#' @noRd
+NULL
+
+#' Check if a set of ranges is sorted
+#'
+#' Will throw and error if seqnames are not relatively sorted (but does not check
+#' if absolutely sorted relative to ordering e.g. alphanumeric)
+#' or will throw error if start position not sorted or will throw error if
+#' range has negative (end < start) width.
+#' @param c Seqnames
+#' @param s start positions
+#' @param e end positions
+#' @noRd
+NULL
+
 #' Perform the overlaps using an interval tree
 #' @param df1 query data.table / data.frame with fields: seqnames, start, end
 #' @param df2 subject data.table / data.frame with fields: seqnames, start, end

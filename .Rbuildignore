@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 memgraph.both.png
 test_run.R
+.travis.yml
+.codecov.yml

@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/walaj/roverlaps.svg?branch=master)](https://travis-ci.org/walaj/roverlaps)
 
-## *rovertools* - Fast and memory efficient genomic range overlaps in R
+## *roverlaps* - Fast and memory efficient genomic range overlaps in R
 
 **License:** [MIT][license]
 
@@ -13,7 +13,7 @@
 Installation
 ------------
 ```R
-devtools::install_github("walaj/rovertools")
+devtools::install_github("walaj/roverlaps")
 ```
 
 Description
@@ -81,7 +81,7 @@ This project is developed and maintained by Jeremiah Wala (jwala@broadinstitute.
 
 Thanks to Erik Garrison for the excellent [interval tree][tree] implementation.
 
-[license]: https://github.com/walaj/rovertools/blob/master/LICENSE
+[license]: https://github.com/walaj/roverlaps/blob/master/LICENSE
 [gUtils]: https://github.com/mskilab/gUtils
 [tree]: https://github.com/ekg/intervaltree
 
