@@ -4,25 +4,15 @@
 
 **License:** [MIT][license]
 
-Table of contents
-=================
-
   * [Installation](#installation)
   * [Description](#description)
-  * [Components](#components)
-    * [Split](#split)
-    * [Stats](#stats)
-    * [Tile](#tile)
-    * [Relabel](#relabel)
-    * [Mol](#mol)
-    * [Convert](#convert)
-  * [Example Recipes](#examples-recipes)
+  * [Examples](#examples)
+  * [Performance](#performance)
   * [Attributions](#attributions)
 
 Installation
 ------------
-
-```
+```R
 devtools::install_github("walaj/rovertools")
 ```
 
@@ -37,7 +27,7 @@ Range overlaps between different sets of genomic intervals
 	     thereby improving memory performance.
 
 Examples
-----------
+--------
 #### Get overlap intervals
 
 ```R

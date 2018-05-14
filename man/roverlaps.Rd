@@ -10,7 +10,7 @@
 \usage{
 cpp_gr2dt(x)
 
-roverlaps(o1, o2, robust = TRUE, cores = 2)
+roverlaps(o1, o2, cores = 1, verbose = FALSE, index_only = FALSE)
 }
 \arguments{
 \item{x}{\code{GRanges} to convert}
@@ -19,9 +19,11 @@ roverlaps(o1, o2, robust = TRUE, cores = 2)
 
 \item{o2}{Subject ranges}
 
-\item{robust}{Perform extra checks (\code{is.unsorted}). \code{[TRUE]}}
+\item{cores}{Maximum number of cores (processes in 1M chunks) [1]}
 
-\item{cores}{Maximum number of cores (processes in 1M chunks)}
+\item{verbose}{Increase the output to stderr}
+
+\item{index_only}{Return only the indicies (query.id and subject.id)}
 }
 \value{
 data.table of GRanges columns ('seqnames', 'start', 'end', 'strand', 'width') and metadata columns
@@ -40,5 +42,5 @@ roverlaps
 Description of your package
 }
 \author{
-you <youremail>
+Jeremiah Wala <jwala@broadinstitute.org>
 }

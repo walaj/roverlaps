@@ -9,6 +9,8 @@
 #' @useDynLib roverlaps
 #' @name roverlaps
 
+if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", ":="))
+
 #' @name cpp_gr2dt
 #' @title Converts \code{GRanges} to \code{data.table}
 #' @description
@@ -78,7 +80,7 @@ cpp_gr2dt = function(x)
     }
 
     return(out)
-  }
+}
 
 #' @name roverlaps
 #' @title Fast overlaps of \code{data.table} or \code{GRanges}
@@ -89,7 +91,8 @@ cpp_gr2dt = function(x)
 #' @param cores Maximum number of cores (processes in 1M chunks) [1]
 #' @param verbose Increase the output to stderr
 #' @param index_only Return only the indicies (query.id and subject.id)
-#' @importFrom data.table data.table as.data.table
+#' @importFrom data.table data.table as.data.table setkey
+#' @importFrom utils globalVariables
 #' @return data.table ('seqnames', 'start', 'end', 'strand', 'query.id', 'subject.id') of overlaps
 #' @export
 roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
@@ -115,6 +118,16 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
 
   stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
   stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
+
+  ## fix issue where c++ doesn't like identical structs.
+  ## skip ahead if trivial
+  if (identical(o1, o2)) {
+    if (verbose)
+      print("skipping cpp because input identical. Trival result")
+    o <- data.table::copy(o1[,list(seqnames, start, end)])
+    o$subject.id <- o$query.id <- seq(nrow(o))
+    return(o)
+  }
 
   if (verbose)
     print("roverlaps.R: factorizing")
@@ -156,7 +169,7 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
     return (o)
 
   ## sort it
-  setkey(o, seqnames, start, end)
+  data.table::setkey(o, seqnames, start, end)
 
   ## convert back from int to factor
   o[,seqnames := factor(levels(o1$seqnames)[seqnames], levels=levels(o1$seqnames))]

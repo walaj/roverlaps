@@ -9,7 +9,6 @@
 #define rassert(b, msg)                        \
 if (b == 0)                                         \
 {                                                   \
-  std::cerr << " THROWING EXCEPTION " << msg << std::endl;     \
   throw std::runtime_error(msg);                \
 }
 
@@ -104,9 +103,8 @@ public:
     }
 
     if (global_verbose)
-      std::cerr << "finished overlaps for intervals ("
-                << m_start << ","
-                << m_end << ")" << std::endl;
+      Rprintf("finished overlaps for intervals (%d,$d)\n",m_start,m_end);
+
     return true;
   }
 
@@ -187,11 +185,11 @@ void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
     rassert(e[i] >= s[i], "end < start");
     if (chr_table.find(c[i]) == chr_table.end() || (i+1 == c.size())) { // not found or last one
       chr_table.insert(c[i]);
-      rassert(std::is_sorted(s.begin() + sort_start, s.begin() + i), "start not sorted by start");
+      rassert(std::is_sorted(s.begin() + sort_start, s.begin() + i + 1), "start pos not sorted");
       sort_start = i;
       curr_chr = c[i];
     } else {
-      rassert(curr_chr == c[i], "chr is not sorted"); // assure we are still on same chr
+      rassert(curr_chr == c[i], "seqnames not sorted"); // assure we are still on same chr
     }
   }
 }
@@ -208,7 +206,7 @@ void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
 Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& df2, int cores, bool verbose, bool index_only)
 {
   if (verbose)
-     std::cerr <<"start roverlaps.cpp" << std::endl;
+    Rprintf("start roverlaps.cpp");
 
   global_verbose = verbose;
   global_index_only = index_only;
@@ -221,7 +219,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
 
   // check sorted
   if (verbose)
-    std::cerr << "roverlaps.cpp: checking sorting of input" << std::endl;
+    Rprintf("roverlaps.cpp: checking sorting of input");
 
   check_sort(c1, s1, e1);
   check_sort(c2, s2, e2);
@@ -237,8 +235,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   eloop = &e1;
 
   if (verbose)
-     std::cerr << "roverlaps: Making interval tree for "
-               << (c2.size() > c1.size() ? c1.size() : c2.size()) << " intervals" << std::endl;
+    Rprintf("roverlaps: Making interval tree for %d interval\n",(c2.size() > c1.size() ? c1.size() : c2.size()));
+
   if (c2.size() > c1.size()) { // c1 should be tree
     make_tree(c1, s1, e1, tree2);
     cloop = &c2;
@@ -251,8 +249,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   if (cores==1) {
     std::vector<int32_t> co, so, eo, query_id, subject_id;
     if (verbose)
-      std::cerr << "robust: looping " << cloop->size()
-                << " intervals" << std::endl;
+      Rprintf("robust: looping %d interval\n", cloop->size());
+
     for (int i = 0; i < cloop->size(); ++i)
       find_overlaps(tree2, cloop->at(i),
                     sloop->at(i),
@@ -263,7 +261,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
       if (c2.size() > c1.size()) // c1 should be tree
         std::swap(query_id, subject_id);
       if (verbose)
-        std::cerr << "roverlaps.cpp: done with c++ call" << std::endl;
+        Rprintf("roverlaps.cpp: done with c++ call");
 
       delete tree2;
 
@@ -298,9 +296,7 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   int num_cores = std::min(cores, (int)queue.size());
 
   if (verbose)
-    std::cerr << "roverlaps: sending " << queue.size()
-              << " work units with up to 1M intervals each"
-              << " on " << num_cores << " threads" << std::endl;
+    Rprintf("roverlaps: sending %d work units with up to 1M intervals each on %d threads\n", queue.size(), num_cores);
 
   for (int i = 0; i < num_cores; ++i) {
     OverlapThreadItem * tu  = new OverlapThreadItem(i);  // create the thread-specific data, must be on heap.
@@ -322,8 +318,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
 
   // merge it out
   if (verbose)
-    std::cerr << "roverlaps: allocing output memory for "
-              << num_hits << " intervals" << std::endl;
+    Rprintf("roverlaps: allocing output memory for %d intervals\n",num_hits);
+
   std::vector<int32_t> co(num_hits);
   std::vector<int32_t> so(num_hits);
   std::vector<int32_t> eo(num_hits);
@@ -331,7 +327,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   std::vector<int32_t> subject_id(num_hits);
 
   if (verbose)
-    std::cerr << "roverlaps: merging the output" << std::endl;
+    Rprintf("roverlaps: merging the output\n");
+
   size_t k = 0;
   for (int i = 0; i < threadqueue.size(); ++i) {
     const OverlapThreadItem * td = threadqueue[i]->GetThreadData();
@@ -349,7 +346,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
     std::swap(query_id, subject_id);
 
   if (verbose)
-    std::cerr << "roverlaps.cpp: done with c++ call" << std::endl;
+    Rprintf("roverlaps.cpp: done with c++ call\n");
+
   return Rcpp::DataFrame::create(Rcpp::Named("seqnames")=co,
                                  Rcpp::Named("start")=so,
                                  Rcpp::Named("end")=eo,
