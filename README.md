@@ -29,8 +29,7 @@ Range overlaps between different sets of genomic intervals
 ### NOTE
 Note that the prefered input for the fastest performance is:
 * Input is ``data.table`` (``GRanges`` will get converted)
-* Seqnames are factors or numeric, not characters
-* Input must be sorted (``data.table::setkey(dt, seqnames, start)``). An error is thrown if not.
+* Seqnames are factors or numeric, not characters (characters will get converted to factors)
 
 Examples
 --------

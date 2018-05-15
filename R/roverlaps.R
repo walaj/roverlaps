@@ -1,6 +1,10 @@
 #' roverlaps
 #'
-#' Description of your package
+#' Range overlaps between different sets of genomic intervals
+#' can be memory intensive and slow for huge (1M+) interval queries.
+#' This package implements fast, memory-efficient interval tree overlaps in C++
+#' and provides flexibility for users to choose only what they need,
+#' thereby improving memory performance.
 #'
 #' @docType package
 #' @author Jeremiah Wala <jwala@broadinstitute.org>
@@ -87,45 +91,79 @@ cpp_gr2dt = function(x)
 #' @title Fast overlaps of \code{data.table} or \code{GRanges}
 #' @description
 #'
-#' @param o1 Query ranges
-#' @param o2 Subject ranges
-#' @param cores Maximum number of cores (processes in 1M chunks) [1]
-#' @param verbose Increase the output to stderr
-#' @param index_only Return only the indicies (query.id and subject.id)
+#' Performs interval overlaps between two genomic ranges, returning the
+#' intersecting set of ranges and the indicies of the query and subject
+#' which created the interval.
+#'
+#' @note Positions in ranges are inclusive. Example: chr1:2-5 (query) and
+#' chr1:5-7 (subject) will create an overlap with value chr1:5-5.
+#'
+#' @param query Query ranges as a \code{data.table} with mandatory fields \code{seqnames} and \code{start}
+#' @param subject Subject ranges as a \code{data.table} with mandatory fields \code{seqnames} and \code{start}
+#' @param verbose Increase the verbosity \code{[FALSE]}
+#' @param index_only Return only the indicies ('query.id' and 'subject.id') \code{[FALSE]}
 #' @importFrom data.table data.table as.data.table setkey
 #' @importFrom utils globalVariables
-#' @return data.table ('seqnames', 'start', 'end', 'strand', 'query.id', 'subject.id') of overlaps
+#' @return data.table ('seqnames', 'start', 'end', 'query.id', 'subject.id') of overlaps
+#' @examples
+#'
+#' library(data.table)
+#' set.seed(42)
+#' C=10000
+#' sn1 <- factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)])
+#' s1  <- sample(seq(100000), C, replace=TRUE)
+#' o1 <- data.table(seqnames=sn1, start=s1)
+#' o1[, end := start + 100]
+#' sn2 <- factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)])
+#' s2  <- sample(seq(100000), C, replace=TRUE)
+#' o2 <- data.table(seqnames=sn2, start=s2)
+#' o2[, end := start + 100]
+#' o <- roverlaps(o1,o2)
+#'
+#' ## output
+#' # seqnames start   end query.id subject.id
+#' #        7 83405 83451        3       3315
+#' #        7 83405 83463        3       3148
+#' #        7 83485 83505        3       1022
+#'
+#' oi <- roverlaps(o1, o2, index_only=TRUE)
+#'
+#' ## output
+#' #    query.id subject.id
+#' #           3       3315
+#' #           3       3148
+#' #           3       1022
 #' @export
-roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
+roverlaps <- function(query, subject, verbose=FALSE, index_only=FALSE) {
 
   if (verbose)
     print("roverlaps.R: checking input")
 
-  if (inherits(o1, "GRanges"))
-    o1 <- cpp_gr2dt(o1)
-  if (inherits(o2, "GRanges"))
-    o2 <- cpp_gr2dt(o2)
+  if (inherits(query, "GRanges"))
+    query <- cpp_gr2dt(query)
+  if (inherits(subject, "GRanges"))
+    subject <- cpp_gr2dt(subject)
 
-  if (!inherits(o1,"data.table"))
+  if (!inherits(query,"data.table"))
     stop("required input is a data.table (preferred) or GRanges")
-  if (!inherits(o2,"data.table"))
+  if (!inherits(subject,"data.table"))
     stop("required input is a data.table (preferred) or GRanges")
 
   # need full bounds (for now)
-  if (!"end" %in% colnames(o1))
-    o1$end = o1$start
-  if (!"end" %in% colnames(o2))
-    o2$end = o2$start
+  if (!"end" %in% colnames(query))
+    query$end = query$start
+  if (!"end" %in% colnames(subject))
+    subject$end = subject$start
 
-  stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
-  stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
 
   ## fix issue where c++ doesn't like identical structs.
   ## skip ahead if trivial
-  if (identical(o1, o2)) {
+  if (identical(query, subject)) {
     if (verbose)
       print("skipping cpp because input identical. Trival result")
-    o <- data.table::copy(o1[,list(seqnames, start, end)])
+    o <- data.table::copy(query[,list(seqnames, start, end)])
     o$subject.id <- o$query.id <- seq(nrow(o))
     return(o)
   }
@@ -135,46 +173,43 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
 
   # convert char to factor for Rcpp
   charswitch = FALSE;
-  if (class(o1$seqnames) != "factor") {
-    o1$seqnames = as.factor(o1$seqnames)
+  if (class(query$seqnames) != "factor") {
+    query$seqnames = as.factor(query$seqnames)
     charswitch = TRUE
   }
-  if (class(o2$seqnames) != "factor") {
-    o2$seqnames = as.factor(o2$seqnames)
+  if (class(subject$seqnames) != "factor") {
+    subject$seqnames = as.factor(subject$seqnames)
     charswitch = TRUE
   }
 
   ## enforce that seqnames work between the two
   # (should be factor at this point, per above)
-  new_levels <- union(levels(o1$seqnames),levels(o2$seqnames))
-  needs_fix = !identical(levels(o1$seqnames), levels(o2$seqnames)) ||
-    class(o1$seqnames) != "factor" || class(o2$seqnames) != "factor"
+  new_levels <- union(levels(query$seqnames),levels(subject$seqnames))
+  needs_fix = !identical(levels(query$seqnames), levels(subject$seqnames)) ||
+    class(query$seqnames) != "factor" || class(subject$seqnames) != "factor"
 
   if (needs_fix) { ## if index only, don't need to reset factors
     if (verbose)
       print("roverlaps.R: setting new factor levels")
-    o1[, seqnames := factor(seqnames, levels=new_levels)]
-    o2[, seqnames := factor(seqnames, levels=new_levels)]
-    if (!identical(levels(o1$seqnames), levels(o2$seqnames)))
-      stop("requires that o1 and o2 have same factor levels in same order. Or that o1 and o2 have same characters")
+    query[, seqnames := factor(seqnames, levels=new_levels)]
+    subject[, seqnames := factor(seqnames, levels=new_levels)]
+    if (!identical(levels(query$seqnames), levels(subject$seqnames)))
+      stop("query and subject must have same factor levels.")
   }
 
   if (verbose)
     print("roverlaps.R: calling cpp")
 
   ## do the actual overlaps
-  stopifnot(all(c("seqnames", "start","end") %in% colnames(o1)))
-  stopifnot(all(c("seqnames", "start","end") %in% colnames(o2)))
-  o <- as.data.table(cppoverlaps(o1, o2, verbose, index_only))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
+  o <- as.data.table(cppoverlaps(query, subject, verbose, index_only))
 
   if (index_only)
     return (o)
 
-  ## sort it
-  data.table::setkey(o, seqnames, start, end)
-
   ## convert back from int to factor
-  o[,seqnames := factor(levels(o1$seqnames)[seqnames], levels=levels(o1$seqnames))]
+  o[,seqnames := factor(levels(query$seqnames)[seqnames], levels=levels(query$seqnames))]
 
   return(o)
 }

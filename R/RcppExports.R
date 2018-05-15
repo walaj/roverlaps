@@ -29,6 +29,7 @@ NULL
 #' if absolutely sorted relative to ordering e.g. alphanumeric)
 #' or will throw error if start position not sorted or will throw error if
 #' range has negative (end < start) width.
+#' SORTING ACTUALLY NOT REQUIRED
 #' @param c Seqnames
 #' @param s start positions
 #' @param e end positions

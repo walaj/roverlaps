@@ -113,10 +113,12 @@ bool find_overlaps(const GenomicIntervalTreeMap* tree, int32_t c, int32_t s, int
 //' if absolutely sorted relative to ordering e.g. alphanumeric)
 //' or will throw error if start position not sorted or will throw error if
 //' range has negative (end < start) width.
+//' SORTING ACTUALLY NOT REQUIRED
 //' @param c Seqnames
 //' @param s start positions
 //' @param e end positions
 //' @noRd
+/*
 void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
                 const Rcpp::IntegerVector& e) {
   SeqHashSet<int32_t> chr_table;
@@ -136,6 +138,7 @@ void check_sort(const Rcpp::IntegerVector& c, const Rcpp::IntegerVector& s,
   // check the last chromsome
   rassert(std::is_sorted(s.begin() + sort_start, s.end()), "start pos not sorted");
 }
+*/
 
 //' Perform the overlaps using an interval tree
 //' @param df1 query data.table / data.frame with fields: seqnames, start, end
@@ -164,8 +167,8 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
   // check sorted
   if (verbose)
     Rprintf("roverlaps.cpp: checking sorting of input");
-  check_sort(c1, s1, e1);
-  check_sort(c2, s2, e2);
+  //check_sort(c1, s1, e1);
+  //check_sort(c2, s2, e2);
 
   // loop through and make the intervals for each chromosome
   tree2 = new GenomicIntervalTreeMap();

@@ -7,26 +7,63 @@
 \alias{roverlaps}
 \title{roverlaps}
 \usage{
-roverlaps(o1, o2, cores = 1, verbose = FALSE, index_only = FALSE)
+roverlaps(query, subject, verbose = FALSE, index_only = FALSE)
 }
 \arguments{
-\item{o1}{Query ranges}
+\item{query}{Query ranges as a \code{data.table} with mandatory fields \code{seqnames} and \code{start}}
 
-\item{o2}{Subject ranges}
+\item{subject}{Subject ranges as a \code{data.table} with mandatory fields \code{seqnames} and \code{start}}
 
-\item{cores}{Maximum number of cores (processes in 1M chunks) [1]}
+\item{verbose}{Increase the verbosity \code{[FALSE]}}
 
-\item{verbose}{Increase the output to stderr}
-
-\item{index_only}{Return only the indicies (query.id and subject.id)}
+\item{index_only}{Return only the indicies ('query.id' and 'subject.id') \code{[FALSE]}}
 }
 \value{
-data.table ('seqnames', 'start', 'end', 'strand', 'query.id', 'subject.id') of overlaps
+data.table ('seqnames', 'start', 'end', 'query.id', 'subject.id') of overlaps
 }
 \description{
-Description of your package
+Range overlaps between different sets of genomic intervals
+can be memory intensive and slow for huge (1M+) interval queries.
+This package implements fast, memory-efficient interval tree overlaps in C++
+and provides flexibility for users to choose only what they need,
+thereby improving memory performance.
 
+Performs interval overlaps between two genomic ranges, returning the
+intersecting set of ranges and the indicies of the query and subject
+which created the interval.
+}
+\note{
+Positions in ranges are inclusive. Example: chr1:2-5 (query) and
+chr1:5-7 (subject) will create an overlap with value chr1:5-5.
+}
+\examples{
 
+library(data.table)
+set.seed(42)
+C=10000
+sn1 <- factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)])
+s1  <- sample(seq(100000), C, replace=TRUE)
+o1 <- data.table(seqnames=sn1, start=s1)
+o1[, end := start + 100]
+sn2 <- factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)])
+s2  <- sample(seq(100000), C, replace=TRUE)
+o2 <- data.table(seqnames=sn2, start=s2)
+o2[, end := start + 100]
+o <- roverlaps(o1,o2)
+
+## output
+# seqnames start   end query.id subject.id
+#        7 83405 83451        3       3315
+#        7 83405 83463        3       3148
+#        7 83485 83505        3       1022
+
+oi <- roverlaps(o1, o2, index_only=TRUE)
+
+## output
+#    query.id subject.id
+#           3       3315
+#           3       3148
+#           3       1022
 }
 \author{
 Jeremiah Wala <jwala@broadinstitute.org>

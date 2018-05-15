@@ -1,15 +1,13 @@
 Package: roverlaps
 Type: Package
 Title: Fast, Memory-Efficient Genomic Range Overlaps
-Version: 0.1.0
+Version: 0.1.1
 Author: Jeremiah Wala
 Date: 2018-05-13
 Maintainer: Jeremiah Wala <jwala@broadinstitute.org>
 Description: Range overlaps between different sets of genomic intervals
 	     can be memory intensive and slow for huge (1M+) interval queries.
-	     Depending on the application, only part of a range overlap is needed 
-	     (e.g. just the overlap mappings, not the actual ranges). This package
-	     implements fast, memory-efficient interval tree overlaps in C++
+	     This package implements fast, memory-efficient interval tree overlaps in C++
 	     and provides flexibility for users to choose only what they need,
 	     thereby improving memory performance.
 License: MIT + file LICENSE

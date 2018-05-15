@@ -20,12 +20,6 @@ test_that("unit test 1", {
   expect_equal(oc$subject.id[1], 1)
 })
 
-test_that("check sort fail", {
-  o1 <- data.table(seqnames=factor(c(1,1)), start=c(2,1), end=c(3,2))
-  o2 <- data.table(seqnames=factor(c(2,2)), start=c(2,1), end=c(3,2))
-  expect_error(roverlaps(o1, o2, verbose=TRUE))
-})
-
 test_that("GenomicRanges convert", {
   o1 <- GRanges(c(1,1), IRanges(start=c(1,1), end=c(2,4)))
   o2 <- GRanges(c(1,1), IRanges(start=c(1,2), end=c(2,6)))
@@ -40,7 +34,7 @@ test_that("GenomicRanges convert", {
 test_that("verbose", { ## make sure it doesn't crash
   o1 <- data.table(seqnames=factor(c(1,1)), start=c(1,1), end=c(2,2))
   o2 <- data.table(seqnames=factor(c(1,2)), start=c(1,1), end=c(2,3))
-  roverlaps(o1, o2, verbose=TRUE)
+  o <- roverlaps(o1, o2, verbose=TRUE)
 })
 
 test_that("index_only", { ## make sure it doesn't crash
@@ -48,6 +42,33 @@ test_that("index_only", { ## make sure it doesn't crash
   o2 <- data.table(seqnames=factor(c(1,2)), start=c(1,1), end=c(2,3))
   o <- roverlaps(o1, o2, index_only=TRUE)
 })
+
+test_that("same output whether or not sorted", {
+  set.seed(42)
+  C=10000
+  o1 <- data.table(seqnames=factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)]), start=sample(seq(100000), C, replace=TRUE))
+  o1[, end := start + 100]
+  o2 <- data.table(seqnames=factor(c(1:22, "X")[sample(seq(23),C, replace=TRUE)]), start=sample(seq(100000), C, replace=TRUE))
+  o2[, end := start + 100]
+  o <- roverlaps(o1,o2)
+  oi <- roverlaps(o1, o2, index_only=TRUE)
+  expect(identical(o$query.id, oi$query.id))
+
+  setkey(o1, seqnames, start)
+  setkey(o2, seqnames, start)
+  os <- roverlaps(o1,o2)
+  ois <- roverlaps(o1, o2, index_only=TRUE)
+  expect(all(os$start %in% o$start))
+  expect(all(os$seqnames %in% o$seqnames))
+  expect(all(ois$start %in% oi$start))
+  expect(all(ois$seqnames %in% oi$seqnames))
+
+  expect(all(o$start %in% os$start))
+  expect(all(o$seqnames %in% os$seqnames))
+  expect(all(oi$start %in% ois$start))
+  expect(all(oi$seqnames %in% ois$seqnames))
+})
+
 
 # test_that("test massive input", {
 #   k=1e7
