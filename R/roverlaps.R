@@ -150,7 +150,7 @@ roverlaps <- function(o1, o2, cores=1, verbose=FALSE, index_only=FALSE) {
   needs_fix = !identical(levels(o1$seqnames), levels(o2$seqnames)) ||
     class(o1$seqnames) != "factor" || class(o2$seqnames) != "factor"
 
-  if (needs_fix && !index_only) { ## if index only, don't need to reset factors
+  if (needs_fix) { ## if index only, don't need to reset factors
     if (verbose)
       print("roverlaps.R: setting new factor levels")
     o1[, seqnames := factor(seqnames, levels=new_levels)]
