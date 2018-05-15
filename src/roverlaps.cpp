@@ -3,12 +3,8 @@
 #include <Rcpp.h>
 
 #define rassert(b, msg)                       \
-if (b == 0)                                   \
+if ((b) == 0)                                 \
   throw std::runtime_error(msg);
-
-#define rverb(msg,...)                                         \
-  if (verbose)                                                 \
-    Rprintf(msg,__VA_ARGS__);
 
 #if __cplusplus > 199711L
 #include <memory>
