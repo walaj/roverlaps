@@ -2,7 +2,8 @@ Package: roverlaps
 Type: Package
 Title: Fast, Memory-Efficient Genomic Range Overlaps
 Version: 0.1.1
-Author: Jeremiah Wala
+Authors@R: c(person(given = "Jeremiah", family = "Wala", role = c("aut","cph","cre"), email="jwala@broadinstitute.org"), 
+   person(given = "Erik", family = "Garrison", role = c("ctb","cph"))) 
 Date: 2018-05-13
 Maintainer: Jeremiah Wala <jwala@broadinstitute.org>
 Description: Range overlaps between different sets of genomic intervals

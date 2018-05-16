@@ -69,6 +69,12 @@ test_that("same output whether or not sorted", {
   expect(all(oi$seqnames %in% ois$seqnames))
 })
 
+test_that("test rcovered",{
+ o1 <- data.table(seqnames=factor(c("1","2")),start=1,end=5)
+ o2 <- data.table(seqnames=factor(c("1","1")),start=3,end=5)
+ o1 <- o1[rcovered(o1,o2)]
+ expect_equal(nrow(o1),1)
+})
 
 # test_that("test massive input", {
 #   k=1e7

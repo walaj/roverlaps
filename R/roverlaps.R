@@ -216,3 +216,36 @@ roverlaps <- function(query, subject, verbose=FALSE, index_only=FALSE) {
 
   return(o)
 }
+
+#' @name rcovered
+#' @title Return logical of whether a query region intersects subject
+#' @description
+#'
+#' Determines which members of a query set of regions has any overlap with
+#' a set of subject intervals. The query does not have to be fully contained within
+#' the subject to be counted as \code{TRUE} overlap.
+#'
+#' @param query Set of query intervals to evaluate for membership in \code{subject}
+#' @param subject Set of subject intervals to check \code{query} against
+#' @param verbose Set the verbosity \code{[FALSE]}
+#' @return Logical vector of same length as \code{query}, \code{TRUE} if interval overlaps subject
+#' @export
+#'
+#' @examples
+#'
+#' library(data.table)
+#' o1 <- data.table(seqnames=factor(c("1","2")),start=1,end=5)
+#' o2 <- data.table(seqnames=factor(c("1","1")),start=3,end=5)
+#'
+#' ## useful for subsetting in one line
+#' o1 <- o1[rcovered(o1,o2)]
+#'
+#' ## output
+#' #    seqnames start end
+#' # 1:        1     1   5
+rcovered <- function(query, subject, verbose=FALSE) {
+  o <- roverlaps(query, subject, index_only=TRUE, verbose=verbose)
+  if (!nrow(o))
+    return(rep(FALSE,nrow(query)))
+  return(seq(nrow(query)) %in% o$query.id)
+}
