@@ -13,7 +13,7 @@
 #' @useDynLib roverlaps
 #' @name roverlaps
 
-if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", ":="))
+##if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", ":="))
 
 #' @name cpp_gr2dt
 #' @title Converts \code{GRanges} to \code{data.table}
@@ -102,7 +102,7 @@ cpp_gr2dt = function(x)
 #' @param subject Subject ranges as a \code{data.table} with mandatory fields \code{seqnames} and \code{start}
 #' @param verbose Increase the verbosity \code{[FALSE]}
 #' @param index_only Return only the indicies ('query.id' and 'subject.id') \code{[FALSE]}
-#' @importFrom data.table data.table as.data.table setkey
+#' @importFrom data.table data.table as.data.table setkey set
 #' @importFrom utils globalVariables
 #' @return data.table ('seqnames', 'start', 'end', 'query.id', 'subject.id') of overlaps
 #' @examples
@@ -191,8 +191,8 @@ roverlaps <- function(query, subject, verbose=FALSE, index_only=FALSE) {
   if (needs_fix) { ## if index only, don't need to reset factors
     if (verbose)
       print("roverlaps.R: setting new factor levels")
-    query[, seqnames := factor(seqnames, levels=new_levels)]
-    subject[, seqnames := factor(seqnames, levels=new_levels)]
+    data.table::set(query, j="seqnames", value=factor(query$seqnames, levels=new_levels))
+    data.table::set(subject, j="seqnames", value=factor(subject$seqnames, levels=new_levels))
     if (!identical(levels(query$seqnames), levels(subject$seqnames)))
       stop("query and subject must have same factor levels.")
   }
@@ -209,7 +209,10 @@ roverlaps <- function(query, subject, verbose=FALSE, index_only=FALSE) {
     return (o)
 
   ## convert back from int to factor
-  o[,seqnames := factor(levels(query$seqnames)[seqnames], levels=levels(query$seqnames))]
+  stopifnot(identical(levels(query$seqnames),new_levels))
+  data.table::set(o, j="seqnames", value=factor(new_levels[o$seqnames], levels=new_levels))
+  stopifnot(identical(levels(o$seqnames), new_levels))
+  ##o[,seqnames := factor(levels(query$seqnames)[seqnames], levels=levels(query$seqnames))]
 
   return(o)
 }

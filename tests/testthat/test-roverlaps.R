@@ -38,9 +38,9 @@ test_that("verbose", { ## make sure it doesn't crash
 })
 
 test_that("index_only", { ## make sure it doesn't crash
-  o1 <- data.table(seqnames=factor(c(1,1)), start=c(1,1), end=c(2,2))
-  o2 <- data.table(seqnames=factor(c(1,2)), start=c(1,1), end=c(2,3))
-  o <- roverlaps(o1, o2, index_only=TRUE)
+  query <- data.table(seqnames=factor(c(1,1)), start=c(1,1), end=c(2,2))
+  subject <- data.table(seqnames=factor(c(1,2)), start=c(1,1), end=c(2,3))
+  o <- roverlaps(query, subject, index_only=TRUE)
 })
 
 test_that("same output whether or not sorted", {
