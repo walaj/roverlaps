@@ -77,13 +77,13 @@ test_that("test rcovered",{
 })
 
 test_that("ragged diff interval", {
-  a <- data.table(seqnames=c(2,2,1,1,1), start=c(3,7,10,67, 95))
-  b <- data.table(seqnames=1, start=c(3,6,80))
+  a <- data.table(seqnames=c(2,2,1,1,1,"X"), start=c(3,7,10,67, 95, 1000))
+  b <- data.table(seqnames=c(1,1,1), start=c(3,6,80))
   b[, end := start + 10] ## (3,13) (6,16) (80,90)
 
-  expect_equal(rodiff(a, b),c(NA,NA,0,13, 5))
-  expect_equal(rodiff(a, b, sign=-1), c(NA,NA,0,13, NA))   ## query must be <= interval
-  expect_equal(rodiff(a, b, sign=1), c(NA,NA,0,51,5)) ## query must be >= interval
+  expect_equal(rodiff(a, b),c(NA,NA,0,13, 5, NA))
+  expect_equal(rodiff(a, b, sign=-1), c(NA,NA,0,13, NA,NA))   ## query must be <= interval
+  expect_equal(rodiff(a, b, sign=1), c(NA,NA,0,51,5,NA)) ## query must be >= interval
   expect_equal(rodiff(data.table(), b), numeric(0))
   expect_equal(rodiff(a, data.table()), rep(NA, nrow(a)))
 })

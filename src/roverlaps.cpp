@@ -320,11 +320,21 @@ Rcpp::NumericVector cpprodiff(const Rcpp::DataFrame& query,
      map[sseq.at(i)].push_back(ginterval(sstart.at(i), send.at(i)));
     
   for (size_t i = 0; i < qseq.size(); ++i) {
+    
+    // if there is no seqnames overlap between query and subject, just continue
+    int_map::const_iterator ii = map.find(qseq.at(i));
+    if (ii == map.end()) {
+      results[i] = -1;
+      continue;
+    }
+    
     std::vector<float> tmp(map[qseq.at(i)].size(), def);
+    
     bool any_result = false; // set to true if it found at least one hit
-    for (size_t j = 0; j < map[qseq.at(i)].size(); ++j) {
-      const int32_t subject_start = map[qseq.at(i)].at(j).first;
-      const int32_t subject_end   = map[qseq.at(i)].at(j).second;
+    for (size_t j = 0; j < ii->second.size(); ++j) {
+      
+      const int32_t subject_start = ii->second.at(j).first;
+      const int32_t subject_end   = ii->second.at(j).second;
       const int32_t q = qstart.at(i);
       
       // query contained in subject

@@ -151,9 +151,9 @@ roverlaps <- function(query, subject, verbose=FALSE, index_only=FALSE) {
 
   # need full bounds (for now)
   if (!"end" %in% colnames(query))
-    query$end = query$start
+    query[, end := start]
   if (!"end" %in% colnames(subject))
-    subject$end = subject$start
+    subject[, end := start]
 
   stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
   stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
@@ -285,7 +285,7 @@ rodiff <- function(query, subject, max=FALSE, sign = 0) {
     stop("required input is a data.table (preferred) or GRanges")
   if (!inherits(subject,"data.table"))
     stop("required input is a data.table (preferred) or GRanges")
-  
+
   if (!nrow(query))
     return(numeric(0))
   if (!nrow(subject))
@@ -293,9 +293,15 @@ rodiff <- function(query, subject, max=FALSE, sign = 0) {
   
   # need full bounds (for now)
   if (!"end" %in% colnames(query))
-    query$end = query$start
+    query[, end := start]
   if (!"end" %in% colnames(subject))
-    subject$end = subject$start
+    subject[, end := start]
+  
+  subject <- subject[!is.na(seqnames) & !is.na(start) & !is.na(end)]
+  if (!nrow(query))
+    return(numeric(0))
+  if (!nrow(subject))
+    return(rep(NA, nrow(query)))
   
   stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
   stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
