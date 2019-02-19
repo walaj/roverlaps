@@ -1,6 +1,8 @@
 #include "IntervalTree.h"
 #include <vector>
+#include <algorithm>
 #include <Rcpp.h>
+#include <limits>
 
 #define rassert(b, msg)                       \
 if ((b) == 0)                                 \
@@ -214,17 +216,35 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
 //' @param query Numeric vector to query 
 //' @param subject Subject to query
 //' @param max Return the max difference instead of min
+//' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
 //' @return Numeric vector of length same as query, of differences between query and subject
 //' @noRd
 // [[Rcpp::export]]
-Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject, bool max)
+Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject, bool max, 
+                                  int sign = 0)
 {
   
   Rcpp::NumericVector results(query.size());
 
+  // only consider values where subject is larger for -1, or
+  // where subject is smaller for 1
+  // so want to reverse sort (larger subject hits first) for -1, forward sort for 1
+//if (sign == -1 || sign == 1)  
+//   std::sort(subject.begin(), subject.end());
+//  if (sign == -1)
+//    std::reverse(subject.begin(), subject.end());
+    
+  // if max, default everything to 0 so that unfilled values are discarded during max calc
+  // if min, default everything to max, so that unfilled values are discarded during min calc
+  float def = max ? 0 : std::numeric_limits<float>::max();
+
   for (size_t i = 0; i < query.size(); ++i) {
-    std::vector<float> tmp(subject.size());
+    std::vector<float> tmp(subject.size(), def);
     for (size_t j = 0; j < subject.size(); ++j) {
+      if (sign == -1 && subject[j] < query[i]) // -1 require q <= s
+        continue;
+      if (sign == 1 && subject[j] > query[i]) // 1: require q >= s
+        continue;
       tmp[j] = std::abs(query[i] - subject[j]);
     }
     results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());

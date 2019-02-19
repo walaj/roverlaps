@@ -260,6 +260,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' @param query Numeric vector to query 
 #' @param subject Numeric vector to query against
 #' @param max Take the max difference instead of min \code{[FALSE]}
+#' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
 #' @importFrom data.table data.table as.data.table setkey set
 #' @importFrom utils globalVariables
 #' @return Numeric vector of same length as query, holding the differences
@@ -271,7 +272,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' subject <- sample(1000, 100)
 #' #o <- raggediff(query, subject)
 #' @export
-raggeddiff <- function(query, subject, max=FALSE) {
+raggeddiff <- function(query, subject, max=FALSE, sign = 0) {
 
   cppraggeddiff(query, subject, max);
 

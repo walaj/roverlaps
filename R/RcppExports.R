@@ -51,9 +51,10 @@ cppoverlaps <- function(df1, df2, verbose, index_only) {
 #' @param query Numeric vector to query 
 #' @param subject Subject to query
 #' @param max Return the max difference instead of min
+#' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
 #' @return Numeric vector of length same as query, of differences between query and subject
 #' @noRd
-cppraggeddiff <- function(query, subject, max) {
-    .Call('_roverlaps_cppraggeddiff', PACKAGE = 'roverlaps', query, subject, max)
+cppraggeddiff <- function(query, subject, max, sign = 0L) {
+    .Call('_roverlaps_cppraggeddiff', PACKAGE = 'roverlaps', query, subject, max, sign)
 }
 

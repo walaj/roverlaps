@@ -4,7 +4,7 @@
 \alias{raggeddiff}
 \title{Find the minimum/maximum difference between each element of vector A, compared with vector B of any size}
 \usage{
-raggeddiff(query, subject, max = FALSE)
+raggeddiff(query, subject, max = FALSE, sign = 0)
 }
 \arguments{
 \item{query}{Numeric vector to query}
@@ -12,6 +12,8 @@ raggeddiff(query, subject, max = FALSE)
 \item{subject}{Numeric vector to query against}
 
 \item{max}{Take the max difference instead of min \code{[FALSE]}}
+
+\item{sign}{If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q}
 }
 \value{
 Numeric vector of same length as query, holding the differences
