@@ -47,3 +47,12 @@ cppoverlaps <- function(df1, df2, verbose, index_only) {
     .Call('_roverlaps_cppoverlaps', PACKAGE = 'roverlaps', df1, df2, verbose, index_only)
 }
 
+#' Perform the ragged difference
+#' @param query Numeric vector to query 
+#' @param subject Subject to query
+#' @param max Return the max difference instead of min
+#' @return Numeric vector of length same as query, of differences between query and subject
+#' @noRd
+cppraggeddiff <- function(query, subject, max) {
+    .Call('_roverlaps_cppraggeddiff', PACKAGE = 'roverlaps', query, subject, max)
+}

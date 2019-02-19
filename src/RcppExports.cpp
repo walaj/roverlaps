@@ -19,9 +19,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cppraggeddiff
+Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject, bool max);
+RcppExport SEXP _roverlaps_cppraggeddiff(SEXP querySEXP, SEXP subjectSEXP, SEXP maxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type query(querySEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type subject(subjectSEXP);
+    Rcpp::traits::input_parameter< bool >::type max(maxSEXP);
+    rcpp_result_gen = Rcpp::wrap(cppraggeddiff(query, subject, max));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_roverlaps_cppoverlaps", (DL_FUNC) &_roverlaps_cppoverlaps, 4},
+    {"_roverlaps_cppraggeddiff", (DL_FUNC) &_roverlaps_cppraggeddiff, 3},
     {NULL, NULL, 0}
 };
 

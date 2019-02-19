@@ -249,3 +249,30 @@ rcovered <- function(query, subject, verbose=FALSE) {
     return(rep(FALSE,nrow(query)))
   return(seq(nrow(query)) %in% o$query.id)
 }
+
+#' @name raggeddiff
+#' @title Find the minimum/maximum difference between each element of vector A, compared with vector B of any size 
+#' @description
+#'
+#' For each element of a numeric vector A, this function will find the distance to either the closest or
+#' further element in B.
+#'
+#' @param query Numeric vector to query 
+#' @param subject Numeric vector to query against
+#' @param max Take the max difference instead of min \code{[FALSE]}
+#' @importFrom data.table data.table as.data.table setkey set
+#' @importFrom utils globalVariables
+#' @return Numeric vector of same length as query, holding the differences
+#' @examples
+#'
+#' library(data.table)
+#' set.seed(42)
+#' query <- sample(100, 3)
+#' subject <- sample(1000, 100)
+#' o <- raggediff(query, subject)
+#' @export
+raggeddiff <- function(query, subject, max=FALSE) {
+
+  cppraggeddiff(query, subject, max);
+
+}

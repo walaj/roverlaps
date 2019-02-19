@@ -208,3 +208,26 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
                                  Rcpp::Named("query.id")=query_id,
                                  Rcpp::Named("subject.id")=subject_id);
 }
+
+
+//' Perform the ragged difference
+//' @param query Numeric vector to query 
+//' @param subject Subject to query
+//' @param max Return the max difference instead of min
+//' @return Numeric vector of length same as query, of differences between query and subject
+//' @noRd
+// [[Rcpp::export]]
+Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject, bool max)
+{
+  
+  Rcpp::NumericVector results(query.size());
+
+  for (size_t i = 0; i < query.size(); ++i) {
+    std::vector<float> tmp(subject.size());
+    for (size_t j = 0; j < subject.size(); ++j) {
+      tmp[j] = std::abs(query[i] - subject[j]);
+    }
+    results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());
+  }
+  return results;
+}
