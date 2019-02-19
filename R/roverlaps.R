@@ -255,7 +255,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' @description
 #'
 #' For each element of a numeric vector A, this function will find the distance to either the closest or
-#' further element in B.
+#' further element in B. Signs are not considered, as it will internally be computed as absolute value (a - b).
 #'
 #' @param query Numeric vector to query 
 #' @param subject Numeric vector to query against
@@ -269,7 +269,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' set.seed(42)
 #' query <- sample(100, 3)
 #' subject <- sample(1000, 100)
-#' o <- raggediff(query, subject)
+#' #o <- raggediff(query, subject)
 #' @export
 raggeddiff <- function(query, subject, max=FALSE) {
 

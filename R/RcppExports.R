@@ -56,3 +56,4 @@ cppoverlaps <- function(df1, df2, verbose, index_only) {
 cppraggeddiff <- function(query, subject, max) {
     .Call('_roverlaps_cppraggeddiff', PACKAGE = 'roverlaps', query, subject, max)
 }
+

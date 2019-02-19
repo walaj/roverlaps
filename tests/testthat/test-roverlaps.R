@@ -76,6 +76,13 @@ test_that("test rcovered",{
  expect_equal(nrow(o1),1)
 })
 
+test_that("ragged diff", {
+ a <- c(3,7,10)
+ b <- c(3,6,80)
+ cc <- raggeddiff(a, b)
+ expect_equal(cc,c(0,1,4))
+})
+
 # test_that("test massive input", {
 #   k=1e7
 #   o1 <- data.table(seqnames=factor(rep(1,k)), start=1, end=2)
