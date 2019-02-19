@@ -250,41 +250,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
   return(seq(nrow(query)) %in% o$query.id)
 }
 
-#' @name raggeddiff
-#' @title Find the minimum/maximum difference between each element of vector A, compared with vector B of any size 
-#' @description
-#'
-#' For each element of a numeric vector A, this function will find the distance to either the closest or
-#' further element in B. Signs are not considered, as it will internally be computed as absolute value (a - b).
-#'
-#' @param query Numeric vector to query 
-#' @param subject Numeric vector to query against
-#' @param max Take the max difference instead of min \code{[FALSE]}
-#' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
-#' @importFrom data.table data.table as.data.table setkey set
-#' @importFrom utils globalVariables
-#' @return Numeric vector of same length as query, holding the differences. Will return NA if no comparison possible
-#' @examples
-#'
-#' library(data.table)
-#' set.seed(42)
-#' query <- sample(100, 3)
-#' subject <- sample(1000, 100)
-#' #o <- raggediff(query, subject)
-#' @export
-raggeddiff <- function(query, subject, max=FALSE, sign = 0) {
-
-  if (!length(query))
-    return(numeric(0))
-  if (!length(subject))
-    return(rep(NA, length(query)))
-  
-  res <- cppraggeddiff(query, subject, max=max, sign=sign);
-  res[res < 0] <- NA
-  return(res)
-}
-
-#' @name raggeddiffinterval
+#' @name rodiff
 #' @title Find the minimum/maximum difference between each element of vector A, compared with set of intervals B of any size 
 #' @description
 #'
@@ -293,8 +259,7 @@ raggeddiff <- function(query, subject, max=FALSE, sign = 0) {
 #' a is in b, then distance is 0.
 #'
 #' @param query Numeric vector to query 
-#' @param subject_start Numeric vector to query against (start positions of intervals)
-#' @param subject_end Numeric vector to query against (end positions of intervals)
+#' @param subject Numeric vector to query against (start positions of intervals)
 #' @param max Take the max difference instead of min \code{[FALSE]}
 #' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
 #' @importFrom data.table data.table as.data.table setkey set
@@ -304,21 +269,76 @@ raggeddiff <- function(query, subject, max=FALSE, sign = 0) {
 #'
 #' library(data.table)
 #' set.seed(42)
-#' query <- sample(100, 3)
-#' subject <- sample(1000, 100)
-#' subject.end <- subject + 10;
-#' #o <- raggediffintervals(query, subject, subject.end)
+#' query <- data.table(seqnames=1, start=sample(100, 3))
+#' subject <- data.table(seqnames=1, start=sample(1000, 100))
+#' subject[, end := start + 10]
+#' #o <- raggediffintervals(query, subject)
 #' @export
-raggeddiffinterval <- function(query, subject_start, subject_end, max=FALSE, sign = 0) {
+rodiff <- function(query, subject, max=FALSE, sign = 0) {
   
-  stopifnot(length(subject_start) == length(subject_end))
+  if (inherits(query, "GRanges"))
+    query <- cpp_gr2dt(query)
+  if (inherits(subject, "GRanges"))
+    subject <- cpp_gr2dt(subject)
   
-  if (!length(query))
+  if (!inherits(query,"data.table"))
+    stop("required input is a data.table (preferred) or GRanges")
+  if (!inherits(subject,"data.table"))
+    stop("required input is a data.table (preferred) or GRanges")
+  
+  if (!nrow(query))
     return(numeric(0))
-  if (!length(subject_start))
-    return(rep(NA, length(query)))
+  if (!nrow(subject))
+    return(rep(NA, nrow(query)))
   
-  res <- cppraggeddiffinterval(query, subject_start, subject_end, max=max, sign=sign);
+  # need full bounds (for now)
+  if (!"end" %in% colnames(query))
+    query$end = query$start
+  if (!"end" %in% colnames(subject))
+    subject$end = subject$start
+  
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
+  
+  ## fix issue where c++ doesn't like identical structs.
+  ## skip ahead if trivial
+  # if (identical(query, subject)) {
+  #   if (verbose)
+  #     print("skipping cpp because input identical. Trival result")
+  #   o <- data.table::copy(query[,list(seqnames, start, end)])
+  #   o$subject.id <- o$query.id <- seq(nrow(o))
+  #   return(o)
+  # }
+
+  # convert char to factor for Rcpp
+  charswitch = FALSE;
+  if (class(query$seqnames) != "factor") {
+    query$seqnames = as.factor(query$seqnames)
+    charswitch = TRUE
+  }
+  if (class(subject$seqnames) != "factor") {
+    subject$seqnames = as.factor(subject$seqnames)
+    charswitch = TRUE
+  }
+  
+  ## enforce that seqnames work between the two
+  # (should be factor at this point, per above)
+  new_levels <- union(levels(query$seqnames),levels(subject$seqnames))
+  needs_fix = !identical(levels(query$seqnames), levels(subject$seqnames)) ||
+    class(query$seqnames) != "factor" || class(subject$seqnames) != "factor"
+  
+  if (needs_fix) { ## if index only, don't need to reset factors
+    data.table::set(query, j="seqnames", value=factor(query$seqnames, levels=new_levels))
+    data.table::set(subject, j="seqnames", value=factor(subject$seqnames, levels=new_levels))
+    if (!identical(levels(query$seqnames), levels(subject$seqnames)))
+      stop("query and subject must have same factor levels.")
+  }
+  
+  ## do the actual queries
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(query)))
+  stopifnot(all(c("seqnames", "start","end") %in% colnames(subject)))
+  
+  res <- cpprodiff(query, subject, max=max, sign=sign);
   res[res < 0] <- NA
   return(res)
   

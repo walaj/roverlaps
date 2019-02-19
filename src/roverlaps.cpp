@@ -40,9 +40,75 @@ typedef SeqHashMap<int32_t, std::vector<GenomicInterval> > GenomicIntervalMap;
 typedef TIntervalTree<int32_t> GenomicIntervalTree;
 typedef SeqHashMap<int32_t, GenomicIntervalTree> GenomicIntervalTreeMap;
 typedef std::vector<GenomicInterval> GenomicIntervalVector;
+typedef std::pair<int32_t, int32_t> ginterval;
 
 // shared memory items across threads
 GenomicIntervalTreeMap * tree2;
+
+
+int32_t getClosest(int32_t, int32_t, int32_t); 
+
+// Returns element closest to target in arr[] 
+int32_t findClosest(const std::vector<int32_t>& arr, int32_t target) 
+{ 
+  // Corner cases 
+  if (target <= arr[0]) 
+    return arr[0]; 
+  if (target >= arr[arr.size() - 1]) 
+    return arr[arr.size() - 1]; 
+  
+  // Doing binary search 
+  int32_t i = 0, j = arr.size(), mid = 0; 
+  while (i < j) { 
+    mid = (i + j) / 2; 
+    
+    if (arr[mid] == target) 
+      return arr[mid]; 
+    
+    /* If target is less than array element, 
+    then search in left */
+    if (target < arr[mid]) { 
+      
+      // If target is greater than previous 
+      // to mid, return closest of two 
+      if (mid > 0 && target > arr[mid - 1]) 
+        return getClosest(arr[mid - 1], 
+                          arr[mid], target); 
+      
+      /* Repeat for left half */
+      j = mid; 
+    } 
+    
+    // If target is greater than mid 
+    else { 
+      if (mid < arr.size() - 1 && target < arr[mid + 1]) 
+        return getClosest(arr[mid], 
+                          arr[mid + 1], target); 
+      // update i 
+      i = mid + 1;  
+    } 
+  } 
+  
+  // Only single element left after search 
+  return arr[mid]; 
+} 
+
+// Method to compare which one is the more close. 
+// We find the closest by taking the difference 
+// between the target and both values. It assumes 
+// that val2 is greater than val1 and target lies 
+// between these two. 
+int32_t getClosest(int32_t val1, int32_t val2, 
+                   int32_t target) 
+{ 
+  if (target - val1 >= val2 - target) 
+    return val2; 
+  else
+    return val1; 
+} 
+
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// This code is contributed bu Smitha Dinesh Semwal 
 
 //' Construct the interval tree
 //' @param c Vector of chromosomes (as integers)
@@ -211,50 +277,6 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
                                  Rcpp::Named("subject.id")=subject_id);
 }
 
-
-//' Perform the ragged difference
-//' @param query Numeric vector to query 
-//' @param subject Subject to query
-//' @param max Return the max difference instead of min
-//' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
-//' @return Numeric vector of length same as query, of differences between query and subject
-//' @noRd
-// [[Rcpp::export]]
-Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject, bool max, 
-                                  int sign = 0)
-{
-  
-  Rcpp::NumericVector results(query.size());
-
-  // only consider values where subject is larger for -1, or
-  // where subject is smaller for 1
-  // so want to reverse sort (larger subject hits first) for -1, forward sort for 1
-//if (sign == -1 || sign == 1)  
-//   std::sort(subject.begin(), subject.end());
-//  if (sign == -1)
-//    std::reverse(subject.begin(), subject.end());
-    
-  // if max, default everything to 0 so that unfilled values are discarded during max calc
-  // if min, default everything to max, so that unfilled values are discarded during min calc
-  float def = max ? 0 : std::numeric_limits<float>::max();
-
-  for (size_t i = 0; i < query.size(); ++i) {
-    std::vector<float> tmp(subject.size(), def);
-    bool any_result = false; // set to true if it found at least one hit
-    for (size_t j = 0; j < subject.size(); ++j) {
-      if (sign == -1 && subject[j] < query[i]) // -1 require q <= s
-        continue;
-      if (sign == 1 && subject[j] > query[i]) // 1: require q >= s
-        continue;
-      tmp[j] = std::abs(query[i] - subject[j]);
-      any_result = true;
-    }
-    results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());
-    results[i] = any_result ? results[i] : -1; // if no result, return -1 (to signal to convert to NA)
-  }
-  return results;
-}
-
 //' Perform the ragged difference between a vector and intervals
 //' @param query Numeric vector to query 
 //' @param subject_start Subject to query (start coordinates)
@@ -264,45 +286,62 @@ Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::
 //' @return Numeric vector of length same as query, of differences between query and subject
 //' @noRd
 // [[Rcpp::export]]
-Rcpp::NumericVector cppraggeddiffinterval(const Rcpp::NumericVector& query, 
-                                          const Rcpp::NumericVector& subject_start, 
-                                          const Rcpp::NumericVector& subject_end,
+Rcpp::NumericVector cpprodiff(const Rcpp::DataFrame& query,
+                                          const Rcpp::DataFrame& subject, 
                                           bool max, 
-                                  int sign = 0)
+                                          int sign = 0)
 {
   
+  //debug
+  //std::vector<int> qq = {1,4,6};
+  //std::vector<int> ss = {1,3,7,10};
+  //for (size_t i = 0; i < qq.size(); ++i)
+  //  Rprintf("target: %d closest %d\n", findClosest(ss, qq[i]));
   
-  Rcpp::NumericVector results(query.size());
+  // define input structures
+  const Rcpp::IntegerVector qseq = query["seqnames"];
+  const Rcpp::IntegerVector sseq = subject["seqnames"];
+  const Rcpp::IntegerVector qstart = query["start"];
+  const Rcpp::IntegerVector sstart = subject["start"];
+  const Rcpp::IntegerVector qend = query["end"];
+  const Rcpp::IntegerVector send = subject["end"];
   
-  assert(subject_start().size() == subject_end().size());
+  Rcpp::NumericVector results(qseq.size());
   
   // if max, default everything to 0 so that unfilled values are discarded during max calc
   // if min, default everything to max, so that unfilled values are discarded during min calc
   float def = max ? 0 : std::numeric_limits<float>::max();
   
-  for (size_t i = 0; i < query.size(); ++i) {
-    std::vector<float> tmp(subject_start.size(), def);
+  // make the intervals
+  typedef SeqHashMap<int32_t, std::vector<ginterval>> int_map;
+  int_map map;
+  
+  for (size_t i = 0; i < sseq.size(); ++i) 
+     map[sseq.at(i)].push_back(ginterval(sstart.at(i), send.at(i)));
+    
+  for (size_t i = 0; i < qseq.size(); ++i) {
+    std::vector<float> tmp(map[qseq.at(i)].size(), def);
     bool any_result = false; // set to true if it found at least one hit
-    for (size_t j = 0; j < subject_start.size(); ++j) {
-      
-      // require that the intervals make sense
-      assert(subject_end[j] >= subject_start[j]);
+    for (size_t j = 0; j < map[qseq.at(i)].size(); ++j) {
+      const int32_t subject_start = map[qseq.at(i)].at(j).first;
+      const int32_t subject_end   = map[qseq.at(i)].at(j).second;
+      const int32_t q = qstart.at(i);
       
       // query contained in subject
-      if (query[i] >= subject_start[j] && query[i] <= subject_end[j]) {
+      if (q >= subject_start && q <= subject_end) {
         tmp[j] = 0;
         any_result = true;
         continue;
       }
       
-      if (sign == -1 && subject_start[j] < query[i]) // -1 require q <= s   ---q----|---s---|
+      if (sign == -1 && subject_start < q) // -1 require q <= s   ---q----|---s---|
         continue;
-      if (sign == 1 && subject_end[j] > query[i]) // 1: require q >= s  ---|--s--|---q---
+      if (sign == 1 && subject_end > q) // 1: require q >= s  ---|--s--|---q---
         continue;
       
       // query can't be equal to subject start or end, because of above
       // query also can't be inside |--s--| because of above
-      tmp[j] = query[i] > subject_end[j] ? query[i] - subject_end[j] : subject_start[j] - query[i];
+      tmp[j] = q > subject_end ? q - subject_end : subject_start - qstart[i];
       any_result = true;
     }
     results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());
@@ -310,4 +349,3 @@ Rcpp::NumericVector cppraggeddiffinterval(const Rcpp::NumericVector& query,
   }
   return results;
 }
-
