@@ -263,7 +263,7 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
 #' @importFrom data.table data.table as.data.table setkey set
 #' @importFrom utils globalVariables
-#' @return Numeric vector of same length as query, holding the differences
+#' @return Numeric vector of same length as query, holding the differences. Will return NA if no comparison possible
 #' @examples
 #'
 #' library(data.table)
@@ -274,6 +274,52 @@ rcovered <- function(query, subject, verbose=FALSE) {
 #' @export
 raggeddiff <- function(query, subject, max=FALSE, sign = 0) {
 
-  cppraggeddiff(query, subject, max);
+  if (!length(query))
+    return(numeric(0))
+  if (!length(subject))
+    return(rep(NA, length(query)))
+  
+  res <- cppraggeddiff(query, subject, max=max, sign=sign);
+  res[res < 0] <- NA
+  return(res)
+}
 
+#' @name raggeddiffinterval
+#' @title Find the minimum/maximum difference between each element of vector A, compared with set of intervals B of any size 
+#' @description
+#'
+#' For each element of a numeric vector A, this function will find the distance to either the closest or
+#' further element in B. Signs are not considered, as it will internally be computed as absolute value (a - b). If 
+#' a is in b, then distance is 0.
+#'
+#' @param query Numeric vector to query 
+#' @param subject_start Numeric vector to query against (start positions of intervals)
+#' @param subject_end Numeric vector to query against (end positions of intervals)
+#' @param max Take the max difference instead of min \code{[FALSE]}
+#' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
+#' @importFrom data.table data.table as.data.table setkey set
+#' @importFrom utils globalVariables
+#' @return Numeric vector of same length as query, holding the differences. Element is NA if no comparison available
+#' @examples
+#'
+#' library(data.table)
+#' set.seed(42)
+#' query <- sample(100, 3)
+#' subject <- sample(1000, 100)
+#' subject.end <- subject + 10;
+#' #o <- raggediffintervals(query, subject, subject.end)
+#' @export
+raggeddiffinterval <- function(query, subject_start, subject_end, max=FALSE, sign = 0) {
+  
+  stopifnot(length(subject_start) == length(subject_end))
+  
+  if (!length(query))
+    return(numeric(0))
+  if (!length(subject_start))
+    return(rep(NA, length(query)))
+  
+  res <- cppraggeddiffinterval(query, subject_start, subject_end, max=max, sign=sign);
+  res[res < 0] <- NA
+  return(res)
+  
 }

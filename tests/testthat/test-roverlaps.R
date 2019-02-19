@@ -79,8 +79,26 @@ test_that("test rcovered",{
 test_that("ragged diff", {
  a <- c(3,7,10)
  b <- c(3,6,80)
- cc <- raggeddiff(a, b)
- expect_equal(cc,c(0,1,4))
+
+ expect_equal(raggeddiff(a, b),c(0,1,4))
+ expect_equal(raggeddiff(c(), b), numeric(0))
+ expect_equal(raggeddiff(a, c()), rep(NA, length(a)))
+ expect_equal(raggeddiff(a, b, sign=-1),c(0,73,70)) ## q <= subject
+ expect_equal(raggeddiff(a, b, sign= 1),c(0,1,4)) ## q >= subject
+})
+
+test_that("ragged diff interval", {
+  a <- c(3,7,10,67, 95)
+  b <- c(3,6,80)
+  b2 <- b + 10 ## (3,13) (6,16) (80,90)
+  
+  expect_equal(raggeddiffinterval(a, b, b2),c(0,0,0,13, 5))
+
+  expect_equal(raggeddiffinterval(a, b, b2, sign=-1), c(0,0,0,13, NA))   ## query must be <= interval
+  expect_equal(raggeddiffinterval(a, b, b2, sign=1), c(0,0,0,51,5)) ## query must be >= interval
+  expect_equal(raggeddiffinterval(c(), b, b2), numeric(0))
+  expect_equal(raggeddiffinterval(a, c(), c()), rep(NA, length(a)))
+  expect_error(raggeddiffinterval(a, b, c(1)))
 })
 
 # test_that("test massive input", {

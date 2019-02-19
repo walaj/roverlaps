@@ -58,3 +58,15 @@ cppraggeddiff <- function(query, subject, max, sign = 0L) {
     .Call('_roverlaps_cppraggeddiff', PACKAGE = 'roverlaps', query, subject, max, sign)
 }
 
+#' Perform the ragged difference between a vector and intervals
+#' @param query Numeric vector to query 
+#' @param subject_start Subject to query (start coordinates)
+#' @param subject_end Subject to query (end coordinates)
+#' @param max Return the max difference instead of min
+#' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
+#' @return Numeric vector of length same as query, of differences between query and subject
+#' @noRd
+cppraggeddiffinterval <- function(query, subject_start, subject_end, max, sign = 0L) {
+    .Call('_roverlaps_cppraggeddiffinterval', PACKAGE = 'roverlaps', query, subject_start, subject_end, max, sign)
+}
+

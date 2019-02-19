@@ -16,7 +16,7 @@ raggeddiff(query, subject, max = FALSE, sign = 0)
 \item{sign}{If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q}
 }
 \value{
-Numeric vector of same length as query, holding the differences
+Numeric vector of same length as query, holding the differences. Will return NA if no comparison possible
 }
 \description{
 For each element of a numeric vector A, this function will find the distance to either the closest or

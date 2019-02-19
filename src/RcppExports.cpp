@@ -33,10 +33,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cppraggeddiffinterval
+Rcpp::NumericVector cppraggeddiffinterval(const Rcpp::NumericVector& query, const Rcpp::NumericVector& subject_start, const Rcpp::NumericVector& subject_end, bool max, int sign);
+RcppExport SEXP _roverlaps_cppraggeddiffinterval(SEXP querySEXP, SEXP subject_startSEXP, SEXP subject_endSEXP, SEXP maxSEXP, SEXP signSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type query(querySEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type subject_start(subject_startSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type subject_end(subject_endSEXP);
+    Rcpp::traits::input_parameter< bool >::type max(maxSEXP);
+    Rcpp::traits::input_parameter< int >::type sign(signSEXP);
+    rcpp_result_gen = Rcpp::wrap(cppraggeddiffinterval(query, subject_start, subject_end, max, sign));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_roverlaps_cppoverlaps", (DL_FUNC) &_roverlaps_cppoverlaps, 4},
     {"_roverlaps_cppraggeddiff", (DL_FUNC) &_roverlaps_cppraggeddiff, 4},
+    {"_roverlaps_cppraggeddiffinterval", (DL_FUNC) &_roverlaps_cppraggeddiffinterval, 5},
     {NULL, NULL, 0}
 };
 

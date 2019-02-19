@@ -1,8 +1,8 @@
 #include "IntervalTree.h"
 #include <vector>
-#include <algorithm>
 #include <Rcpp.h>
 #include <limits>
+#include <cassert>
 
 #define rassert(b, msg)                       \
 if ((b) == 0)                                 \
@@ -240,14 +240,74 @@ Rcpp::NumericVector cppraggeddiff(const Rcpp::NumericVector& query, const Rcpp::
 
   for (size_t i = 0; i < query.size(); ++i) {
     std::vector<float> tmp(subject.size(), def);
+    bool any_result = false; // set to true if it found at least one hit
     for (size_t j = 0; j < subject.size(); ++j) {
       if (sign == -1 && subject[j] < query[i]) // -1 require q <= s
         continue;
       if (sign == 1 && subject[j] > query[i]) // 1: require q >= s
         continue;
       tmp[j] = std::abs(query[i] - subject[j]);
+      any_result = true;
     }
     results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());
+    results[i] = any_result ? results[i] : -1; // if no result, return -1 (to signal to convert to NA)
   }
   return results;
 }
+
+//' Perform the ragged difference between a vector and intervals
+//' @param query Numeric vector to query 
+//' @param subject_start Subject to query (start coordinates)
+//' @param subject_end Subject to query (end coordinates)
+//' @param max Return the max difference instead of min
+//' @param sign If 0, consider values where q > s and s > q, if 1 only consider values where q >= s, if -1 only consider values where s >= q
+//' @return Numeric vector of length same as query, of differences between query and subject
+//' @noRd
+// [[Rcpp::export]]
+Rcpp::NumericVector cppraggeddiffinterval(const Rcpp::NumericVector& query, 
+                                          const Rcpp::NumericVector& subject_start, 
+                                          const Rcpp::NumericVector& subject_end,
+                                          bool max, 
+                                  int sign = 0)
+{
+  
+  
+  Rcpp::NumericVector results(query.size());
+  
+  assert(subject_start().size() == subject_end().size());
+  
+  // if max, default everything to 0 so that unfilled values are discarded during max calc
+  // if min, default everything to max, so that unfilled values are discarded during min calc
+  float def = max ? 0 : std::numeric_limits<float>::max();
+  
+  for (size_t i = 0; i < query.size(); ++i) {
+    std::vector<float> tmp(subject_start.size(), def);
+    bool any_result = false; // set to true if it found at least one hit
+    for (size_t j = 0; j < subject_start.size(); ++j) {
+      
+      // require that the intervals make sense
+      assert(subject_end[j] >= subject_start[j]);
+      
+      // query contained in subject
+      if (query[i] >= subject_start[j] && query[i] <= subject_end[j]) {
+        tmp[j] = 0;
+        any_result = true;
+        continue;
+      }
+      
+      if (sign == -1 && subject_start[j] < query[i]) // -1 require q <= s   ---q----|---s---|
+        continue;
+      if (sign == 1 && subject_end[j] > query[i]) // 1: require q >= s  ---|--s--|---q---
+        continue;
+      
+      // query can't be equal to subject start or end, because of above
+      // query also can't be inside |--s--| because of above
+      tmp[j] = query[i] > subject_end[j] ? query[i] - subject_end[j] : subject_start[j] - query[i];
+      any_result = true;
+    }
+    results[i] = max ? *std::max_element(tmp.begin(), tmp.end()) : *std::min_element(tmp.begin(), tmp.end());
+    results[i] = any_result ? results[i] : -1; // if no result, return -1 (to signal to convert to NA)
+  }
+  return results;
+}
+
