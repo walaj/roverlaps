@@ -41,39 +41,63 @@ typedef TIntervalTree<int32_t> GenomicIntervalTree;
 typedef SeqHashMap<int32_t, GenomicIntervalTree> GenomicIntervalTreeMap;
 typedef std::vector<GenomicInterval> GenomicIntervalVector;
 typedef std::pair<int32_t, int32_t> ginterval;
+typedef std::pair<std::int32_t, size_t> point;
 
 // shared memory items across threads
 GenomicIntervalTreeMap * tree2;
 
+// Method to compare which one is the more close. 
+// We find the closest by taking the difference 
+// between the target and both values. It assumes 
+// that val2 is greater than val1 and target lies 
+// between these two. 
+point getClosest(const point& val1, const point& val2, 
+                 int32_t target) 
+{ 
+  if (target - val1.first >= val2.first - target) 
+    return val2; 
+  else
+    return val1; 
+} 
 
-int32_t getClosest(int32_t, int32_t, int32_t); 
 
 // Returns element closest to target in arr[] 
-int32_t findClosest(const std::vector<int32_t>& arr, int32_t target) 
+// sign = 1: q >= s
+point findClosest(const std::vector<point>& arr, int32_t target, int sign) 
 { 
   // Corner cases 
-  if (target <= arr[0]) 
+  if (target <= arr[0].first && (sign == 0 || sign == -1)) 
     return arr[0]; 
-  if (target >= arr[arr.size() - 1]) 
-    return arr[arr.size() - 1]; 
+  else if (target <= arr[0].first) // sign 1, q must be bigger
+    return point(std::numeric_limits<int32_t>::min(),0);
+  else if (target >= arr[arr.size() - 1].first && (sign == 0 || sign == 1)) 
+    return arr[arr.size() - 1];
+  else if (target >= arr[arr.size() - 1].first) // sign -1, q must be smaller, but impossible
+    return point(std::numeric_limits<int32_t>::min(),0);
   
   // Doing binary search 
   int32_t i = 0, j = arr.size(), mid = 0; 
   while (i < j) { 
     mid = (i + j) / 2; 
     
-    if (arr[mid] == target) 
+    if (arr[mid].first == target) 
       return arr[mid]; 
     
     /* If target is less than array element, 
     then search in left */
-    if (target < arr[mid]) { 
+    if (target < arr[mid].first) {   
       
       // If target is greater than previous 
       // to mid, return closest of two 
-      if (mid > 0 && target > arr[mid - 1]) 
-        return getClosest(arr[mid - 1], 
+      if (mid > 0 && target > arr[mid - 1].first) { // --(m-1)----T----M
+        if (sign==0)
+          return getClosest(arr[mid - 1], 
                           arr[mid], target); 
+        else if (sign == 1) // query is bigger than previous to mid, so return that one
+            return(arr[mid - 1]);
+        else  // sign: -1. query is the smaller one
+            return(arr[mid]);
+      }
       
       /* Repeat for left half */
       j = mid; 
@@ -81,30 +105,23 @@ int32_t findClosest(const std::vector<int32_t>& arr, int32_t target)
     
     // If target is greater than mid 
     else { 
-      if (mid < arr.size() - 1 && target < arr[mid + 1]) 
+      if (mid < arr.size() - 1 && target < arr[mid + 1].first) {// --(m)----T----(m+1)
+        if (sign==0)  
         return getClosest(arr[mid], 
                           arr[mid + 1], target); 
+        else if (sign == 1) // query needs to be bigger, so return m
+          return(arr[mid]);
+        else // sign -1: query needs to be smaller
+          return(arr[mid+1]);
+      }
+        
       // update i 
       i = mid + 1;  
     } 
   } 
   
   // Only single element left after search 
-  return arr[mid]; 
-} 
-
-// Method to compare which one is the more close. 
-// We find the closest by taking the difference 
-// between the target and both values. It assumes 
-// that val2 is greater than val1 and target lies 
-// between these two. 
-int32_t getClosest(int32_t val1, int32_t val2, 
-                   int32_t target) 
-{ 
-  if (target - val1 >= val2 - target) 
-    return val2; 
-  else
-    return val1; 
+  return point(std::numeric_limits<int32_t>::min(),0); //arr[mid]; 
 } 
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -277,6 +294,12 @@ Rcpp::DataFrame cppoverlaps(const Rcpp::DataFrame& df1, const Rcpp::DataFrame& d
                                  Rcpp::Named("subject.id")=subject_id);
 }
 
+struct less_than_key {
+  inline bool operator() (const point& struct1, const point& struct2) {
+    return (struct1.first < struct2.first);
+  }
+};
+
 //' Perform the ragged difference between a vector and intervals
 //' @param query Numeric vector to query 
 //' @param subject_start Subject to query (start coordinates)
@@ -291,13 +314,7 @@ Rcpp::NumericVector cpprodiff(const Rcpp::DataFrame& query,
                                           bool max, 
                                           int sign = 0)
 {
-  
-  //debug
-  //std::vector<int> qq = {1,4,6};
-  //std::vector<int> ss = {1,3,7,10};
-  //for (size_t i = 0; i < qq.size(); ++i)
-  //  Rprintf("target: %d closest %d\n", findClosest(ss, qq[i]));
-  
+
   // define input structures
   const Rcpp::IntegerVector qseq = query["seqnames"];
   const Rcpp::IntegerVector sseq = subject["seqnames"];
@@ -312,20 +329,86 @@ Rcpp::NumericVector cpprodiff(const Rcpp::DataFrame& query,
   // if min, default everything to max, so that unfilled values are discarded during min calc
   float def = max ? 0 : std::numeric_limits<float>::max();
   
-  // make the intervals
   typedef SeqHashMap<int32_t, std::vector<ginterval>> int_map;
-  int_map map;
+  typedef SeqHashMap<int32_t, std::vector<point>> vmap;
   
-  for (size_t i = 0; i < sseq.size(); ++i) 
+  int_map map;
+  vmap starts;
+  vmap ends;
+  
+  // make the intervals
+  for (size_t i = 0; i < sseq.size(); ++i) {
      map[sseq.at(i)].push_back(ginterval(sstart.at(i), send.at(i)));
+     starts[sseq.at(i)].push_back(point(sstart.at(i), i));
+     ends[sseq.at(i)].push_back(point(send.at(i), i));
+  }
+  
+  // sort them
+  for (auto i : starts)
+    std::sort(i.second.begin(), i.second.end(), less_than_key());
+  for (auto i : ends)
+    std::sort(i.second.begin(), i.second.end(), less_than_key());
     
   for (size_t i = 0; i < qseq.size(); ++i) {
+    const int32_t q = qstart.at(i);
     
     // if there is no seqnames overlap between query and subject, just continue
     int_map::const_iterator ii = map.find(qseq.at(i));
     if (ii == map.end()) {
       results[i] = -1;
       continue;
+    }
+    
+    // check if it is contained.
+    // if hits and is bigger than start and smaller than end its same end, and its same interval, then hit
+    point nearest_start2 = findClosest(starts[qseq.at(i)], q, 1); // query must be bigger than start
+    //point nearest_end2   = findClosest(ends[qseq.at(i)], q, -1); // query must be smaller than end
+    //Rprintf("q: %d, ns2: %d, ne2: %d, %d, %d\n", q, nearest_start2.first, nearest_end2.first, nearest_start2.second, nearest_end2.second);
+    
+    //Rprintf("qsize: %d, q: %d, i %d, ns2: %d, send: %d\n", 
+    //        qseq.size(), q, i, nearest_start2.first, send[i]);
+    
+    if ( (q >= nearest_start2.first && q <= send[nearest_start2.second]) && 
+         nearest_start2.first > std::numeric_limits<int32_t>::min()) {
+      results[i] = 0;
+      continue;
+    }
+      
+    // we know it's not contained, so binary way
+    point nearest_start = findClosest(starts[qseq.at(i)], q, -1); // query must be smaller than start
+    point nearest_end   = findClosest(ends[qseq.at(i)], q,  1); // query must be bigger than end
+    
+    //Rprintf("q: %d, ns: %d, ne: %d sign: %d\n", q, nearest_start, nearest_end, sign);
+    
+    // nothing hits
+    if (nearest_end.first == std::numeric_limits<int32_t>::min() && 
+        nearest_start.first == std::numeric_limits<int32_t>::min()) {
+      results[i] = -1;
+      continue;
+    }
+      
+    // for sign 1, query has to be bigger than end, so if nothing hits on nearest_end, then failed
+    if (sign == 1) {
+      bool hit = nearest_end.first > std::numeric_limits<int32_t>::min();
+      results[i] = hit ? std::abs(nearest_end.first - q) : -1;
+      continue;
+    } 
+    
+    // for sign -1, query has to be smaller than end, so if nothing hits on nearest_start, fail
+    if (sign == -1) { 
+      bool hit = nearest_start.first > std::numeric_limits<int32_t>::min();
+      results[i] = hit ? std::abs(nearest_start.first - q) : -1;
+      continue;
+    }
+    
+    // just get the nearest
+    if (sign == 0) {
+      if (nearest_start.first == std::numeric_limits<int32_t>::min())
+        results[i] = std::abs(nearest_end.first - q);
+      else if (nearest_end.first == std::numeric_limits<int32_t>::min())
+        results[i] = std::abs(nearest_start.first - q);
+      else
+        results[i] = std::min(std::abs(nearest_end.first - q), std::abs(nearest_start.first - q));
     }
     
     std::vector<float> tmp(map[qseq.at(i)].size(), def);
@@ -335,7 +418,6 @@ Rcpp::NumericVector cpprodiff(const Rcpp::DataFrame& query,
       
       const int32_t subject_start = ii->second.at(j).first;
       const int32_t subject_end   = ii->second.at(j).second;
-      const int32_t q = qstart.at(i);
       
       // query contained in subject
       if (q >= subject_start && q <= subject_end) {
